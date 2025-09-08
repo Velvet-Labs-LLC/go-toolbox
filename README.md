@@ -27,6 +27,10 @@ This project serves as a personal toolbox containing various utilities and tools
 - **Network Tools**: Network utilities and diagnostics
 - **File Tools**: File processing and manipulation utilities
 
+## Included CLI Tools
+
+- **serve**: [Directory File Server](./cmd/cli/serve/README.md) — Serve any directory over HTTP for local network access. Great for quick file sharing or static site hosting.
+
 ## Project Structure
 
 ```(text)
@@ -61,7 +65,6 @@ toolbox/
 - Go 1.21+ (latest stable version recommended)
 - Make (for build automation)
 
-
 ## Installation
 
 1. Clone the repository
@@ -70,6 +73,22 @@ toolbox/
 4. Build tools: `make build` or `go build ./cmd/...`
 
 ## Usage
+
+### Serve a Directory Over HTTP (Local Network)
+
+You can use the built-in `serve` tool to share any directory on your machine with others on your local network:
+
+```bash
+# Build all tools
+make build
+
+# Serve a directory (default: current directory, port 8080)
+./bin/serve --dir /path/to/directory --port 8080
+```
+
+The tool will print the correct URL to access from other devices on your network.
+
+See [cmd/cli/serve/README.md](./cmd/cli/serve/README.md) for full documentation.
 
 Each tool in the `cmd/` directory can be built and run independently:
 
@@ -84,7 +103,6 @@ go build -o bin/mytool ./cmd/cli/mytool
 go run ./cmd/cli/mytool [args]
 ```
 
-
 ## Development
 
 ### First-Time Setup (WSL2/Ubuntu/Dev Container)
@@ -95,13 +113,11 @@ Run this to install all required linters and dev tools:
 make dev-setup
 ```
 
-
 This will install:
 
 - golangci-lint v2.4.0 (for linting)
 - gosec (for security checks)
 - goimports (for formatting)
-
 
 You can now use `make lint`, `make test`, and other targets immediately.
 

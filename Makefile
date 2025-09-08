@@ -1,10 +1,12 @@
 # Go Toolbox Makefile
 
 # Variables
+
 BINARY_NAME=toolbox
 BUILD_DIR=bin
 GO_FILES=$(shell find . -name "*.go" -type f)
-MAIN_DIRS=$(shell find cmd -maxdepth 2 -name "main.go" -exec dirname {} \; | sort)
+# Find all directories under cmd/ containing a main.go (recursively)
+MAIN_DIRS=$(shell find cmd -type f -name "main.go" -exec dirname {} \; | sort)
 
 # Default target
 .DEFAULT_GOAL := help
@@ -23,12 +25,16 @@ help:
 	@awk 'BEGIN {FS = ":.*##"} /^[a-zA-Z_-]+:.*##/ { printf "  %-20s %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
 
 ## build: Build all applications
+
 build: clean
 	@echo "$(GREEN)Building all applications...$(NC)"
 	@mkdir -p $(BUILD_DIR)
 	@for dir in $(MAIN_DIRS); do \
-		echo "Building $$dir..."; \
-		go build -ldflags="-s -w" -o $(BUILD_DIR)/$$(basename $$dir) ./$$dir; \
+		parent=$$(basename $$(dirname $$dir)); \
+		app=$$(basename $$dir); \
+		bin_name=$$parent-$$app; \
+		echo "Building $$dir as $$bin_name..."; \
+		go build -ldflags="-s -w" -o $(BUILD_DIR)/$$bin_name ./$$dir; \
 	done
 	@echo "$(GREEN)Build complete!$(NC)"
 

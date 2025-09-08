@@ -1,0 +1,42 @@
+# Toolbox Configuration File
+# This file contains default configuration for all toolbox applications
+
+# Global Settings
+log_level: info
+log_file: ""  # Empty means stdout
+
+# CLI Application Settings
+cli:
+  default_output: table
+  color_output: true
+  verbose: false
+
+# TUI Application Settings
+tui:
+  theme: default
+  mouse_events: true
+
+# Web Application Settings
+web:
+  port: 8080
+  host: localhost
+  tls_cert: ""
+  tls_key: ""
+
+# File Operations
+file:
+  max_file_size: 100MB
+  recursive_search: true
+  show_hidden: false
+
+# Network Tools
+network:
+  timeout: 5s
+  concurrent_scans: 100
+  default_ports: [22, 23, 53, 80, 110, 443, 993, 995]
+
+# System Information
+system:
+  refresh_interval: 1s
+  show_processes: true
+  max_processes: 50

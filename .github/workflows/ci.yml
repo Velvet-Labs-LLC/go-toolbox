@@ -1,0 +1,218 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  GO_VERSION: '1.21'
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ env.GO_VERSION }}
+
+    - name: Cache Go modules
+      uses: actions/cache@v3
+      with:
+        path: ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-
+
+    - name: Download dependencies
+      run: go mod download
+
+    - name: Run tests
+      run: go test -v ./...
+
+    - name: Run tests with coverage
+      run: go test -race -coverprofile=coverage.out -covermode=atomic ./...
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.out
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ env.GO_VERSION }}
+
+    - name: golangci-lint
+      uses: golangci/golangci-lint-action@v3
+      with:
+        version: latest
+        args: --timeout=5m
+
+  security:
+    name: Security
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ env.GO_VERSION }}
+
+    - name: Run Gosec Security Scanner
+      uses: securego/gosec@master
+      with:
+        args: './...'
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: [test, lint]
+    strategy:
+      matrix:
+        goos: [linux, windows, darwin]
+        goarch: [amd64, arm64]
+        exclude:
+          # Exclude Windows ARM64 for now
+          - goos: windows
+            goarch: arm64
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ env.GO_VERSION }}
+
+    - name: Cache Go modules
+      uses: actions/cache@v3
+      with:
+        path: ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-
+
+    - name: Download dependencies
+      run: go mod download
+
+    - name: Build CLI
+      env:
+        GOOS: ${{ matrix.goos }}
+        GOARCH: ${{ matrix.goarch }}
+      run: |
+        mkdir -p bin
+        if [ "$GOOS" = "windows" ]; then
+          go build -ldflags="-s -w" -o bin/toolbox-${{ matrix.goos }}-${{ matrix.goarch }}.exe ./cmd/cli/main
+        else
+          go build -ldflags="-s -w" -o bin/toolbox-${{ matrix.goos }}-${{ matrix.goarch }} ./cmd/cli/main
+        fi
+
+    - name: Build TUI
+      env:
+        GOOS: ${{ matrix.goos }}
+        GOARCH: ${{ matrix.goarch }}
+      run: |
+        if [ "$GOOS" = "windows" ]; then
+          go build -ldflags="-s -w" -o bin/toolbox-tui-${{ matrix.goos }}-${{ matrix.goarch }}.exe ./cmd/tui/main
+        else
+          go build -ldflags="-s -w" -o bin/toolbox-tui-${{ matrix.goos }}-${{ matrix.goarch }} ./cmd/tui/main
+        fi
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: binaries-${{ matrix.goos }}-${{ matrix.goarch }}
+        path: bin/*
+
+  benchmark:
+    name: Benchmark
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ env.GO_VERSION }}
+
+    - name: Run benchmarks
+      run: go test -bench=. -benchmem ./... > benchmark.txt
+
+    - name: Upload benchmark results
+      uses: actions/upload-artifact@v3
+      with:
+        name: benchmark-results
+        path: benchmark.txt
+
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    needs: [test, lint, build]
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ env.GO_VERSION }}
+
+    - name: Download all artifacts
+      uses: actions/download-artifact@v3
+      with:
+        path: artifacts
+
+    - name: Prepare release assets
+      run: |
+        mkdir -p release
+        find artifacts -name "toolbox-*" -type f -exec cp {} release/ \;
+        find artifacts -name "toolbox-tui-*" -type f -exec cp {} release/ \;
+
+    - name: Generate changelog
+      id: changelog
+      run: |
+        # Simple changelog generation
+        echo "Changes in this release:" > CHANGELOG.md
+        git log --pretty=format:"- %s" $(git describe --tags --abbrev=0 HEAD^)..HEAD >> CHANGELOG.md
+
+    - name: Create Release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: Release ${{ github.ref }}
+        body_path: CHANGELOG.md
+        draft: false
+        prerelease: false
+
+    - name: Upload Release Assets
+      run: |
+        for file in release/*; do
+          if [ -f "$file" ]; then
+            echo "Uploading $file"
+            # In a real scenario, you'd use a proper upload action
+            # This is just a placeholder
+          fi
+        done

@@ -1,11 +1,14 @@
 {
   "name": "Go Toolbox DevContainer",
-  "image": "mcr.microsoft.com/devcontainers/go:1.23-bullseye",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
   "features": {
     "ghcr.io/devcontainers/features/docker-in-docker:2": {},
     "ghcr.io/devcontainers/features/github-cli:1": {},
     "ghcr.io/devcontainers/features/go:1": {
-      "version": "1.23"
+      "version": "1.24"
     },
     "ghcr.io/devcontainers/features/node:1": {
       "version": "lts"
@@ -16,7 +19,9 @@
       "settings": {
         "go.toolsManagement.autoUpdate": true,
         "go.lintTool": "golangci-lint",
-        "go.lintFlags": ["--fast"],
+        "go.lintFlags": [
+          "--fast"
+        ],
         "go.useLanguageServer": true,
         "go.formatTool": "goimports",
         "editor.formatOnSave": true,
@@ -33,11 +38,18 @@
       ]
     }
   },
-  "postCreateCommand": "make dev-setup && go mod tidy",
-  "forwardPorts": [8080, 8443],
+  "postCreateCommand": "go mod tidy",
+  "forwardPorts": [
+    8080,
+    8443
+  ],
   "portsAttributes": {
-    "8080": {"label": "Go HTTP Server"},
-    "8443": {"label": "Go HTTPS Server"}
+    "8080": {
+      "label": "Go HTTP Server"
+    },
+    "8443": {
+      "label": "Go HTTPS Server"
+    }
   },
   "remoteUser": "vscode"
 }

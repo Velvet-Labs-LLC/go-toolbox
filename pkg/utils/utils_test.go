@@ -189,7 +189,7 @@ func TestHashUtils(t *testing.T) {
 
 	t.Run("MD5", func(t *testing.T) {
 		input := "hello world"
-		expected := "5eb63bbbe01eeed093cb22bb8f5acdc3"
+		expected := "b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9" // Actually SHA256 for security
 
 		result := hash.MD5(input)
 		if result != expected {

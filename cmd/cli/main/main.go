@@ -52,8 +52,8 @@ func createRootCommand() *cobra.Command {
 		Short:   "A comprehensive collection of CLI tools",
 		Long:    `Toolbox is a collection of CLI, TUI, and utility tools written in Go.`,
 		Version: appVersion,
-		Run: func(cmd *cobra.Command, args []string) {
-			cmd.Help()
+		Run: func(cmd *cobra.Command, _ []string) {
+			_ = cmd.Help()
 		},
 	}
 
@@ -74,7 +74,7 @@ func createFileCommand() *cobra.Command {
 		Use:   "hash [file]",
 		Short: "Calculate file hashes",
 		Args:  cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			return runFileHash(baseCmd, args[0])
 		},
 	}
@@ -84,7 +84,7 @@ func createFileCommand() *cobra.Command {
 		Use:   "info [file]",
 		Short: "Show file information",
 		Args:  cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			return runFileInfo(baseCmd, args[0])
 		},
 	}
@@ -103,7 +103,7 @@ func createNetworkCommand() *cobra.Command {
 		Use:   "ping [host]",
 		Short: "Ping a host",
 		Args:  cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			return runNetworkPing(baseCmd, args[0])
 		},
 	}
@@ -113,7 +113,7 @@ func createNetworkCommand() *cobra.Command {
 		Use:   "portscan [host]",
 		Short: "Scan ports on a host",
 		Args:  cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			return runPortScan(baseCmd, args[0])
 		},
 	}
@@ -131,7 +131,7 @@ func createSystemCommand() *cobra.Command {
 	infoCmd := &cobra.Command{
 		Use:   "info",
 		Short: "Show system information",
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			return runSystemInfo(baseCmd)
 		},
 	}
@@ -140,7 +140,7 @@ func createSystemCommand() *cobra.Command {
 	psCmd := &cobra.Command{
 		Use:   "ps",
 		Short: "List running processes",
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			return runProcessList(baseCmd)
 		},
 	}
@@ -158,7 +158,7 @@ func createUtilsCommand() *cobra.Command {
 	randomCmd := &cobra.Command{
 		Use:   "random",
 		Short: "Generate random strings",
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			return runRandomGenerator(baseCmd)
 		},
 	}
@@ -168,7 +168,7 @@ func createUtilsCommand() *cobra.Command {
 		Use:   "string [operation] [text]",
 		Short: "String manipulation utilities",
 		Args:  cobra.MinimumNArgs(2),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			return runStringUtils(baseCmd, args[0], args[1])
 		},
 	}

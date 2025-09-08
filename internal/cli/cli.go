@@ -2,6 +2,7 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -22,6 +23,25 @@ const (
 	OutputTable OutputFormat = "table"
 	OutputJSON  OutputFormat = "json"
 	OutputYAML  OutputFormat = "yaml"
+
+	// Progress bar constants
+	progressBarWidth       = 50
+	progressBarThrottleMs  = 65
+	progressBarSpinnerType = 14
+	spinnerSleepMs         = 100
+
+	// Size constants
+	bytesPerKB = 1024
+	bytesPerMB = bytesPerKB * 1024
+	bytesPerGB = bytesPerMB * 1024
+	bytesPerTB = bytesPerGB * 1024
+
+	// Time conversion constants
+	msPerSecond = 1000
+	hoursPerDay = 24
+
+	// String truncation constants
+	minTruncateLength = 3
 )
 
 // Colors for different message types.
@@ -36,6 +56,7 @@ var (
 // BaseCommand provides common functionality for CLI commands.
 type BaseCommand struct {
 	*cobra.Command
+
 	Verbose bool
 	Output  OutputFormat
 }
@@ -167,13 +188,13 @@ type ProgressBar struct {
 func NewProgressBar(maxValue int, description string) *ProgressBar {
 	bar := progressbar.NewOptions(maxValue,
 		progressbar.OptionSetDescription(description),
-		progressbar.OptionSetWidth(50),
-		progressbar.OptionThrottle(65*time.Millisecond),
+		progressbar.OptionSetWidth(progressBarWidth),
+		progressbar.OptionThrottle(progressBarThrottleMs*time.Millisecond),
 		progressbar.OptionShowCount(),
 		progressbar.OptionOnCompletion(func() {
 			fmt.Fprint(os.Stderr, "\n")
 		}),
-		progressbar.OptionSpinnerType(14),
+		progressbar.OptionSpinnerType(progressBarSpinnerType),
 		progressbar.OptionFullWidth(),
 		progressbar.OptionSetRenderBlankState(true),
 	)
@@ -238,7 +259,7 @@ func (p *Prompt) Confirm(label string) (bool, error) {
 
 	result, err := prompt.Run()
 	if err != nil {
-		if err == promptui.ErrAbort {
+		if errors.Is(err, promptui.ErrAbort) {
 			return false, nil
 		}
 		return false, err
@@ -288,7 +309,7 @@ func (s *Spinner) Start(message string) {
 			default:
 				fmt.Printf("\r%s %s", s.chars[s.current], message)
 				s.current = (s.current + 1) % len(s.chars)
-				time.Sleep(100 * time.Millisecond)
+				time.Sleep(spinnerSleepMs * time.Millisecond)
 			}
 		}
 	}()
@@ -306,10 +327,10 @@ func ParseSize(sizeStr string) (int64, error) {
 
 	multipliers := map[string]int64{
 		"B":  1,
-		"KB": 1024,
-		"MB": 1024 * 1024,
-		"GB": 1024 * 1024 * 1024,
-		"TB": 1024 * 1024 * 1024 * 1024,
+		"KB": bytesPerKB,
+		"MB": bytesPerMB,
+		"GB": bytesPerGB,
+		"TB": bytesPerTB,
 	}
 
 	for suffix, multiplier := range multipliers {
@@ -349,7 +370,7 @@ func FormatSize(bytes int64) string {
 // FormatDuration formats a duration into a human-readable string.
 func FormatDuration(d time.Duration) string {
 	if d < time.Second {
-		return fmt.Sprintf("%.0fms", d.Seconds()*1000)
+		return fmt.Sprintf("%.0fms", d.Seconds()*msPerSecond)
 	}
 	if d < time.Minute {
 		return fmt.Sprintf("%.1fs", d.Seconds())
@@ -357,5 +378,5 @@ func FormatDuration(d time.Duration) string {
 	if d < time.Hour {
 		return fmt.Sprintf("%.1fm", d.Minutes())
 	}
-	return fmt.Sprintf("%.1fd", d.Hours()/24)
+	return fmt.Sprintf("%.1fd", d.Hours()/hoursPerDay)
 }

@@ -13,31 +13,41 @@ import (
 
 const appName = "toolbox-tui"
 
-// Styles
+// Constants for UI styling
+const (
+	// Padding values
+	paddingSmall  = 2
+	paddingMedium = 4
+
+	// Key bindings
+	keyCtrlC = "ctrl+c"
+	keyEsc   = "esc"
+	keyQ     = "q"
+	keyB     = "b"
+)
+
+// Styles.
 var (
 	titleStyle = lipgloss.NewStyle().
-		Bold(true).
-		Foreground(lipgloss.Color("#FAFAFA")).
-		Background(lipgloss.Color("#7D56F4")).
-		Padding(0, 1)
+			Bold(true).
+			Foreground(lipgloss.Color("#FAFAFA")).
+			Background(lipgloss.Color("#7D56F4")).
+			Padding(0, 1)
 
 	itemStyle = lipgloss.NewStyle().
-		PaddingLeft(4)
+			PaddingLeft(paddingMedium)
 
 	selectedItemStyle = lipgloss.NewStyle().
-		PaddingLeft(2).
-		Foreground(lipgloss.Color("170"))
-
-	paginationStyle = lipgloss.NewStyle().
-		PaddingLeft(4)
+				PaddingLeft(paddingSmall).
+				Foreground(lipgloss.Color("170"))
 
 	helpStyle = lipgloss.NewStyle().
-		PaddingLeft(4).
-		PaddingTop(1).
-		Foreground(lipgloss.Color("241"))
+			PaddingLeft(paddingMedium).
+			PaddingTop(1).
+			Foreground(lipgloss.Color("241"))
 
 	quitTextStyle = lipgloss.NewStyle().
-		Margin(1, 0, 2, 4)
+			Margin(1, 0, paddingSmall, paddingMedium)
 )
 
 // Model represents the application state
@@ -74,7 +84,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "ctrl+c", "q":
+		case keyCtrlC, keyQ:
 			m.quitting = true
 			return m, tea.Quit
 
@@ -93,7 +103,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.quitting = true
 				return m, tea.Quit
 			}
-			
+
 			// Handle menu selection
 			return m.handleMenuSelection()
 		}
@@ -154,9 +164,7 @@ func (m model) handleMenuSelection() (tea.Model, tea.Cmd) {
 }
 
 // File Operations Model
-type fileOpsModel struct {
-	backToMain bool
-}
+type fileOpsModel struct{}
 
 func NewFileOperationsModel() tea.Model {
 	return fileOpsModel{}
@@ -172,7 +180,7 @@ func (m fileOpsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "ctrl+c", "q":
 			return m, tea.Quit
-		case "esc", "b":
+		case keyEsc, keyB:
 			return initialModel(), nil
 		}
 	}
@@ -208,7 +216,7 @@ func (m networkToolsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "ctrl+c", "q":
 			return m, tea.Quit
-		case "esc", "b":
+		case keyEsc, keyB:
 			return initialModel(), nil
 		}
 	}
@@ -244,7 +252,7 @@ func (m systemInfoModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "ctrl+c", "q":
 			return m, tea.Quit
-		case "esc", "b":
+		case keyEsc, keyB:
 			return initialModel(), nil
 		}
 	}
@@ -281,7 +289,7 @@ func (m stringUtilsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "ctrl+c", "q":
 			return m, tea.Quit
-		case "esc", "b":
+		case keyEsc, keyB:
 			return initialModel(), nil
 		}
 	}
@@ -317,7 +325,7 @@ func (m randomGenModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "ctrl+c", "q":
 			return m, tea.Quit
-		case "esc", "b":
+		case keyEsc, keyB:
 			return initialModel(), nil
 		}
 	}
@@ -353,7 +361,7 @@ func (m configModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "ctrl+c", "q":
 			return m, tea.Quit
-		case "esc", "b":
+		case keyEsc, keyB:
 			return initialModel(), nil
 		}
 	}

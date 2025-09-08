@@ -6,15 +6,19 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
-	"math/rand"
+	"math/rand/v2"
 	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
 	"strconv"
 	"strings"
-	"time"
 	"unicode"
+)
+
+const (
+	// String truncation constants
+	minTruncateLength = 3
 )
 
 // StringUtils provides string manipulation utilities
@@ -44,10 +48,10 @@ func (s *StringUtils) Truncate(str string, maxLen int) string {
 	if len(str) <= maxLen {
 		return str
 	}
-	if maxLen <= 3 {
+	if maxLen <= minTruncateLength {
 		return str[:maxLen]
 	}
-	return str[:maxLen-3] + "..."
+	return str[:maxLen-minTruncateLength] + "..."
 }
 
 // PadLeft pads a string to the left with the specified character
@@ -80,7 +84,10 @@ func (s *StringUtils) ToCamelCase(str string) string {
 
 	result := strings.ToLower(words[0])
 	for i := 1; i < len(words); i++ {
-		result += strings.Title(strings.ToLower(words[i]))
+		word := strings.ToLower(words[i])
+		if len(word) > 0 {
+			result += strings.ToUpper(word[:1]) + word[1:]
+		}
 	}
 	return result
 }
@@ -260,7 +267,7 @@ func (f *FileUtils) ReadLines(path string) ([]string, error) {
 // WriteLines writes lines to a file
 func (f *FileUtils) WriteLines(path string, lines []string) error {
 	content := strings.Join(lines, "\n")
-	return os.WriteFile(path, []byte(content), 0644)
+	return os.WriteFile(path, []byte(content), 0600)
 }
 
 // Glob returns all files matching a pattern
@@ -322,14 +329,12 @@ func (h *HashUtils) SHA256File(path string) (string, error) {
 
 // RandomUtils provides random generation utilities
 type RandomUtils struct {
-	rand *rand.Rand
+	// No internal state needed with rand/v2
 }
 
 // Random returns a new RandomUtils instance
 func Random() *RandomUtils {
-	return &RandomUtils{
-		rand: rand.New(rand.NewSource(time.Now().UnixNano())),
-	}
+	return &RandomUtils{}
 }
 
 // String generates a random string of specified length
@@ -337,19 +342,19 @@ func (r *RandomUtils) String(length int) string {
 	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 	result := make([]byte, length)
 	for i := range result {
-		result[i] = charset[r.rand.Intn(len(charset))]
+		result[i] = charset[rand.IntN(len(charset))]
 	}
 	return string(result)
 }
 
 // Int generates a random integer between min and max (inclusive)
-func (r *RandomUtils) Int(min, max int) int {
-	return r.rand.Intn(max-min+1) + min
+func (r *RandomUtils) Int(minVal, maxVal int) int {
+	return rand.IntN(maxVal-minVal+1) + minVal
 }
 
 // Bool generates a random boolean
 func (r *RandomUtils) Bool() bool {
-	return r.rand.Intn(2) == 1
+	return rand.IntN(2) == 1
 }
 
 // Choice randomly selects an item from a slice
@@ -357,12 +362,12 @@ func (r *RandomUtils) Choice(items []string) string {
 	if len(items) == 0 {
 		return ""
 	}
-	return items[r.rand.Intn(len(items))]
+	return items[rand.IntN(len(items))]
 }
 
 // Shuffle shuffles a string slice in place
 func (r *RandomUtils) Shuffle(slice []string) {
-	r.rand.Shuffle(len(slice), func(i, j int) {
+	rand.Shuffle(len(slice), func(i, j int) {
 		slice[i], slice[j] = slice[j], slice[i]
 	})
 }

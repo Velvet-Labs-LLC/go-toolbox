@@ -15,6 +15,7 @@ import (
 // Logger wraps slog.Logger with additional functionality
 type Logger struct {
 	*slog.Logger
+
 	level  slog.Level
 	output io.Writer
 }
@@ -43,7 +44,7 @@ var globalLogger *Logger
 // Init initializes the global logger
 func Init(config Config) error {
 	level := parseLevel(config.Level)
-	
+
 	// Determine output writer
 	var output io.Writer
 	switch config.Output {
@@ -53,36 +54,36 @@ func Init(config Config) error {
 		output = os.Stderr
 	default:
 		// File output
-		if err := os.MkdirAll(filepath.Dir(config.Output), 0755); err != nil {
+		if err := os.MkdirAll(filepath.Dir(config.Output), 0750); err != nil {
 			return err
 		}
-		file, err := os.OpenFile(config.Output, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+		file, err := os.OpenFile(config.Output, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0600)
 		if err != nil {
 			return err
 		}
 		output = file
 	}
-	
+
 	// Create handler based on format
 	var handler slog.Handler
 	opts := &slog.HandlerOptions{
 		Level:     level,
 		AddSource: config.WithCaller,
 	}
-	
+
 	if config.Format == "json" {
 		handler = slog.NewJSONHandler(output, opts)
 	} else {
 		handler = NewColorHandler(output, opts)
 	}
-	
+
 	logger := slog.New(handler)
 	globalLogger = &Logger{
 		Logger: logger,
 		level:  level,
 		output: output,
 	}
-	
+
 	return nil
 }
 
@@ -90,7 +91,7 @@ func Init(config Config) error {
 func Get() *Logger {
 	if globalLogger == nil {
 		// Initialize with default config if not initialized
-		Init(Config{
+		_ = Init(Config{
 			Level:      LevelInfo,
 			Output:     "stdout",
 			Format:     "text",
@@ -165,7 +166,7 @@ func (h *ColorHandler) WithGroup(name string) slog.Handler {
 func (h *ColorHandler) handleWithColor(ctx context.Context, record slog.Record) error {
 	var levelColor *color.Color
 	var levelText string
-	
+
 	switch record.Level {
 	case slog.LevelDebug:
 		levelColor = color.New(color.FgCyan)
@@ -183,27 +184,27 @@ func (h *ColorHandler) handleWithColor(ctx context.Context, record slog.Record) 
 		levelColor = color.New(color.Reset)
 		levelText = "UNKNOWN"
 	}
-	
+
 	// Format timestamp
 	timestamp := record.Time.Format("2006-01-02 15:04:05")
-	
+
 	// Write colored output
 	color.New(color.FgHiBlack).Fprintf(h.output, "%s ", timestamp)
 	levelColor.Fprintf(h.output, "[%s] ", levelText)
-	
+
 	// Write message
 	if record.Level >= slog.LevelError {
 		color.New(color.FgRed).Fprintf(h.output, "%s", record.Message)
 	} else {
 		fmt.Fprintf(h.output, "%s", record.Message)
 	}
-	
+
 	// Write attributes
 	record.Attrs(func(attr slog.Attr) bool {
 		color.New(color.FgHiBlack).Fprintf(h.output, " %s=%v", attr.Key, attr.Value)
 		return true
 	})
-	
+
 	fmt.Fprintln(h.output)
 	return nil
 }

@@ -2,6 +2,7 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -15,7 +16,7 @@ type Config struct {
 	// Global settings
 	LogLevel string `mapstructure:"log_level"`
 	LogFile  string `mapstructure:"log_file"`
-	
+
 	// Application-specific settings
 	CLI CLIConfig `mapstructure:"cli"`
 	TUI TUIConfig `mapstructure:"tui"`
@@ -49,35 +50,36 @@ var globalConfig *Config
 func Init(appName string) error {
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
-	
+
 	// Add configuration paths
 	viper.AddConfigPath("./configs")
 	viper.AddConfigPath("$HOME/.config/" + appName)
 	viper.AddConfigPath("/etc/" + appName)
 	viper.AddConfigPath(".")
-	
+
 	// Set environment variable prefix
 	viper.SetEnvPrefix(strings.ToUpper(appName))
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	viper.AutomaticEnv()
-	
+
 	// Set defaults
 	setDefaults()
-	
+
 	// Read configuration file
 	if err := viper.ReadInConfig(); err != nil {
-		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+		var configNotFoundError viper.ConfigFileNotFoundError
+		if !errors.As(err, &configNotFoundError) {
 			return fmt.Errorf("error reading config file: %w", err)
 		}
 		// Config file not found, use defaults
 	}
-	
+
 	// Unmarshal into struct
 	globalConfig = &Config{}
 	if err := viper.Unmarshal(globalConfig); err != nil {
 		return fmt.Errorf("error unmarshaling config: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -86,16 +88,16 @@ func setDefaults() {
 	// Global defaults
 	viper.SetDefault("log_level", "info")
 	viper.SetDefault("log_file", "")
-	
+
 	// CLI defaults
 	viper.SetDefault("cli.default_output", "table")
 	viper.SetDefault("cli.color_output", true)
 	viper.SetDefault("cli.verbose", false)
-	
+
 	// TUI defaults
 	viper.SetDefault("tui.theme", "default")
 	viper.SetDefault("tui.mouse_events", true)
-	
+
 	// Web defaults
 	viper.SetDefault("web.port", 8080)
 	viper.SetDefault("web.host", "localhost")
@@ -109,7 +111,7 @@ func Get() *Config {
 		// Initialize with default values if not initialized
 		globalConfig = &Config{}
 		setDefaults()
-		viper.Unmarshal(globalConfig)
+		_ = viper.Unmarshal(globalConfig)
 	}
 	return globalConfig
 }
@@ -150,11 +152,11 @@ func GetConfigDir(appName string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	
+
 	configDir := filepath.Join(homeDir, ".config", appName)
-	if err := os.MkdirAll(configDir, 0755); err != nil {
+	if err := os.MkdirAll(configDir, 0750); err != nil {
 		return "", err
 	}
-	
+
 	return configDir, nil
 }

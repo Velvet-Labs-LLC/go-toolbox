@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/brand/toolbox/internal/cli"
-	"github.com/brand/toolbox/internal/config"
-	"github.com/brand/toolbox/internal/logger"
+	"github.com/nate3d/toolbox/internal/cli"
+	"github.com/nate3d/toolbox/internal/config"
+	"github.com/nate3d/toolbox/internal/logger"
 	"github.com/spf13/cobra"
 )
 

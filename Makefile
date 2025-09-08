@@ -135,10 +135,11 @@ update-deps:
 	@go get -u ./...
 	@go mod tidy
 
-## dev-setup: Set up development environment
+
+## dev-setup: Set up development environment (installs all required dev tools)
 dev-setup:
 	@echo "$(GREEN)Setting up development environment...$(NC)"
-	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+	@curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s -- -b $(shell go env GOPATH)/bin v2.4.0
 	@go install github.com/securecodewarrior/gosec/v2/cmd/gosec@latest
 	@go install golang.org/x/tools/cmd/goimports@latest
 	@echo "$(GREEN)Development tools installed!$(NC)"

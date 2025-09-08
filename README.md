@@ -61,11 +61,13 @@ toolbox/
 - Go 1.21+ (latest stable version recommended)
 - Make (for build automation)
 
+
 ## Installation
 
 1. Clone the repository
 2. Install dependencies: `go mod download`
-3. Build tools: `make build` or `go build ./cmd/...`
+3. Set up dev tools (linters, formatters): `make dev-setup`
+4. Build tools: `make build` or `go build ./cmd/...`
 
 ## Usage
 
@@ -82,7 +84,26 @@ go build -o bin/mytool ./cmd/cli/mytool
 go run ./cmd/cli/mytool [args]
 ```
 
+
 ## Development
+
+### First-Time Setup (WSL2/Ubuntu/Dev Container)
+
+Run this to install all required linters and dev tools:
+
+```bash
+make dev-setup
+```
+
+
+This will install:
+
+- golangci-lint v2.4.0 (for linting)
+- gosec (for security checks)
+- goimports (for formatting)
+
+
+You can now use `make lint`, `make test`, and other targets immediately.
 
 ### Adding New Tools
 

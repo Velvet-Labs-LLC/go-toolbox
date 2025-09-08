@@ -1,0 +1,27 @@
+c# Auto-detect text files and normalize them
+* text=auto
+
+# Enforce LF for source and common text files (recommended for Go projects)
+*.go     text eol=lf
+*.mod    text eol=lf
+*.sum    text eol=lf
+*.yaml   text eol=lf
+*.yml    text eol=lf
+*.sh     text eol=lf
+*.md     text eol=lf
+*.txt    text eol=lf
+*.json   text eol=lf
+*.js     text eol=lf
+*.css    text eol=lf
+*.html   text eol=lf
+
+# Treat compiled/binary files as binary (do not perform EOL conversion)
+bin/*    -text
+*.exe    -text
+*.dll    -text
+*.png    -text
+*.jpg    -text
+*.gif    -text
+
+# Ensure the repository itself is consistent
+/.gitattributes text eol=lf

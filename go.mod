@@ -1,4 +1,4 @@
-module github.com/brand/toolbox
+module github.com/nate3d/toolbox
 
 go 1.24.0
 

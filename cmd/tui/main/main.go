@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/brand/toolbox/internal/config"
-	"github.com/brand/toolbox/internal/logger"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/nate3d/toolbox/internal/config"
+	"github.com/nate3d/toolbox/internal/logger"
 )
 
 const appName = "toolbox-tui"

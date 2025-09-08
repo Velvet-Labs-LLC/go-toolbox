@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/brand/toolbox/pkg/utils"
+	"github.com/nate3d/toolbox/pkg/utils"
 )
 
 // Example demonstrates basic usage of the toolbox utilities

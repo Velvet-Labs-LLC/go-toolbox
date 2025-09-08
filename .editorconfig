@@ -1,0 +1,20 @@
+root = true
+
+[*.{go,mod,sum}]
+end_of_line = lf
+charset = utf-8
+indent_style = tab
+indent_size = 4
+trim_trailing_whitespace = true
+insert_final_newline = true
+
+[*.{yaml,yml,md,txt,json,js,css,html,sh}]
+end_of_line = lf
+charset = utf-8
+indent_style = space
+indent_size = 2
+trim_trailing_whitespace = true
+insert_final_newline = true
+
+[*.{png,jpg,jpeg,gif,ico,exe,dll}]
+binary = true

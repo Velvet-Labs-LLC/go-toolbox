@@ -308,8 +308,8 @@ func (h *HashUtils) MD5File(path string) (string, error) {
 	defer file.Close()
 
 	hash := sha256.New()
-	if _, err := io.Copy(hash, file); err != nil {
-		return "", err
+	if _, copyErr := io.Copy(hash, file); copyErr != nil {
+		return "", copyErr
 	}
 
 	return hex.EncodeToString(hash.Sum(nil)), nil
@@ -325,8 +325,8 @@ func (h *HashUtils) SHA256File(path string) (string, error) {
 	defer file.Close()
 
 	hash := sha256.New()
-	if _, err := io.Copy(hash, file); err != nil {
-		return "", err
+	if _, copyErr := io.Copy(hash, file); copyErr != nil {
+		return "", copyErr
 	}
 
 	return hex.EncodeToString(hash.Sum(nil)), nil

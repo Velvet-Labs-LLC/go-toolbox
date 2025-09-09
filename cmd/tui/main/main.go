@@ -183,7 +183,7 @@ func (m fileOpsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "ctrl+c", "q":
+		case keyCtrlC, "q":
 			return m, tea.Quit
 		case keyEsc, keyB:
 			return initialModel(), nil
@@ -219,7 +219,7 @@ func (m networkToolsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "ctrl+c", "q":
+		case keyCtrlC, "q":
 			return m, tea.Quit
 		case keyEsc, keyB:
 			return initialModel(), nil
@@ -255,7 +255,7 @@ func (m systemInfoModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "ctrl+c", "q":
+		case keyCtrlC, "q":
 			return m, tea.Quit
 		case keyEsc, keyB:
 			return initialModel(), nil
@@ -292,7 +292,7 @@ func (m stringUtilsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "ctrl+c", "q":
+		case keyCtrlC, "q":
 			return m, tea.Quit
 		case keyEsc, keyB:
 			return initialModel(), nil
@@ -328,7 +328,7 @@ func (m randomGenModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "ctrl+c", "q":
+		case keyCtrlC, "q":
 			return m, tea.Quit
 		case keyEsc, keyB:
 			return initialModel(), nil
@@ -364,7 +364,7 @@ func (m configModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "ctrl+c", "q":
+		case keyCtrlC, "q":
 			return m, tea.Quit
 		case keyEsc, keyB:
 			return initialModel(), nil

@@ -41,11 +41,12 @@ func TestDefaultConfigValues(t *testing.T) {
 func TestGetConfigDirCreatesDirectory(t *testing.T) {
 	appName := "testapp"
 	// Clean up any previous state
-	d := filepath.Join(os.TempDir(), ".config", appName)
+	tempDir := t.TempDir()
+	d := filepath.Join(tempDir, ".config", appName)
 	os.RemoveAll(d)
 
 	// Override UserHomeDir to temp dir by setting HOME env var
-	t.Setenv("HOME", os.TempDir())
+	t.Setenv("HOME", tempDir)
 
 	dir, err := GetConfigDir(appName)
 	if err != nil {

@@ -154,8 +154,8 @@ func GetConfigDir(appName string) (string, error) {
 	}
 
 	configDir := filepath.Join(homeDir, ".config", appName)
-	if err := os.MkdirAll(configDir, 0750); err != nil {
-		return "", err
+	if mkdirErr := os.MkdirAll(configDir, 0750); mkdirErr != nil {
+		return "", mkdirErr
 	}
 
 	return configDir, nil

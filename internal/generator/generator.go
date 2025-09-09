@@ -36,6 +36,8 @@ func (t ToolType) String() string {
 }
 
 // GeneratorModel represents the tool generator state
+//
+//nolint:revive // Using GeneratorModel instead of Model to avoid confusion with other model types
 type GeneratorModel struct {
 	step        int
 	toolType    ToolType
@@ -185,15 +187,14 @@ func (m *GeneratorModel) handleMenuMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if m.step == 0 {
 			// Return to main menu - this would need to be handled by parent
 			return m, tea.Quit
-		} else {
-			// Go back to previous step
-			m.step = 0
-			m.cursor = 0
-			m.error = ""
-			m.success = ""
-			m.inputMode = false
-			m.inputText.Reset()
 		}
+		// Go back to previous step
+		m.step = 0
+		m.cursor = 0
+		m.error = ""
+		m.success = ""
+		m.inputMode = false
+		m.inputText.Reset()
 	case "r":
 		if m.step == 3 {
 			// Reset to create another tool
@@ -313,6 +314,8 @@ func (m *GeneratorModel) generateTool() error {
 
 	// Generate additional files based on tool type
 	switch m.toolType {
+	case CLI:
+		// CLI tools only need the main.go file, which is already generated
 	case Web:
 		if err := m.generateWebFiles(toolDir); err != nil {
 			return fmt.Errorf("failed to generate web files: %w", err)
@@ -396,7 +399,7 @@ func (m *GeneratorModel) generateWebFiles(toolDir string) error {
 }
 
 // generateTUIFiles creates additional files for TUI tools
-func (m *GeneratorModel) generateTUIFiles(toolDir string) error {
+func (m *GeneratorModel) generateTUIFiles(_ string) error {
 	// For now, TUI tools only need the main.go file
 	// Could add additional model files here in the future
 	return nil
@@ -414,7 +417,7 @@ func isValidToolName(name string) bool {
 		return false
 	}
 	for _, char := range name {
-		if !((char >= 'a' && char <= 'z') || (char >= '0' && char <= '9') || char == '-') {
+		if (char < 'a' || char > 'z') && (char < '0' || char > '9') && char != '-' {
 			return false
 		}
 	}

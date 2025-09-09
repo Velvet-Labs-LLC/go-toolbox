@@ -1,3 +1,4 @@
+//nolint:cyclop // This package contains complex server setup logic
 package main
 
 import (
@@ -16,6 +17,7 @@ import (
 	"time"
 )
 
+//nolint:cyclop,gocognit,nestif // This function handles CLI argument parsing and server setup
 func main() {
 	tlsFlag := flag.Bool("tls", false, "Enable HTTPS (default: false)")
 	certFile := flag.String("cert", "", "Path to TLS certificate file (optional)")
@@ -93,23 +95,19 @@ func main() {
 				MinVersion:   tls.VersionTLS12,
 			}
 			log.Fatal(srv.ListenAndServeTLS("", ""))
-		} else {
-			log.Fatal(srv.ListenAndServeTLS(cert, key))
 		}
-	} else {
-		srv := &http.Server{
-			Addr:              addr,
-			Handler:           nil,
-			ReadTimeout:       15 * time.Second,
-			WriteTimeout:      15 * time.Second,
-			ReadHeaderTimeout: 5 * time.Second,
-			IdleTimeout:       60 * time.Second,
-		}
-		log.Fatal(srv.ListenAndServe())
+		log.Fatal(srv.ListenAndServeTLS(cert, key))
 	}
-}
-
-// generateSelfSignedCert returns PEM-encoded cert and key as strings
+	srv := &http.Server{
+		Addr:              addr,
+		Handler:           nil,
+		ReadTimeout:       15 * time.Second,
+		WriteTimeout:      15 * time.Second,
+		ReadHeaderTimeout: 5 * time.Second,
+		IdleTimeout:       60 * time.Second,
+	}
+	log.Fatal(srv.ListenAndServe())
+} // generateSelfSignedCert returns PEM-encoded cert and key as strings
 func generateSelfSignedCert() (string, string) {
 	priv, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
@@ -145,8 +143,8 @@ func getLocalIP() string {
 		if iface.Flags&net.FlagUp == 0 || iface.Flags&net.FlagLoopback != 0 {
 			continue
 		}
-		addrs, err := iface.Addrs()
-		if err != nil {
+		addrs, addrErr := iface.Addrs()
+		if addrErr != nil {
 			continue
 		}
 		for _, addr := range addrs {

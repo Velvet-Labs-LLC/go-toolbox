@@ -8,6 +8,8 @@ import (
 )
 
 // Example demonstrates basic usage of the toolbox utilities
+//
+//nolint:funlen // This is an example function demonstrating various utilities
 func main() {
 	fmt.Println("Go Toolbox Examples")
 	fmt.Println("===================")

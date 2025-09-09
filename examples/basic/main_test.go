@@ -159,7 +159,7 @@ func BenchmarkConcurrencyExample(b *testing.B) {
 
 // A simple smoke test to ensure main runs without panic
 // TestMainFunction ensures main() runs without panicking
-func TestMainFunction(t *testing.T) {
+func TestMainFunction(_ *testing.T) {
 	// Just call main; output is ignored
 	main()
 }

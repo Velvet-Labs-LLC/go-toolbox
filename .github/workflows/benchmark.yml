@@ -178,29 +178,71 @@ jobs:
           fi
 
           echo "baseline_ref=$BASELINE_REF" >> $GITHUB_OUTPUT
+          echo "🔍 Getting baseline benchmarks..."
 
-          # Try to get baseline from the target branch
-          echo "🔍 Fetching baseline benchmarks from $BASELINE_REF..."
-
-          # Store current state
+          # Current branch/commit info
+          current_branch=$(git branch --show-current)
           current_commit=$(git rev-parse HEAD)
 
-          # Checkout baseline
+          echo "Current branch: $current_branch"
+          echo "Current commit: $current_commit"
+          echo "Target baseline: $BASELINE_REF"
+
+          # Strategy 1: Try to use existing baseline file from repository
+          if [ -f ".github/benchmark-baselines/baseline-${{ matrix.goarch }}.txt" ] && [ -s ".github/benchmark-baselines/baseline-${{ matrix.goarch }}.txt" ]; then
+            echo "✅ Found existing baseline file in repository"
+            cp ".github/benchmark-baselines/baseline-${{ matrix.goarch }}.txt" "benchmark-results/baseline-${{ matrix.goarch }}.txt"
+            echo "has_baseline=true" >> $GITHUB_OUTPUT
+            echo "baseline_source=repository" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Strategy 2: If we're on the baseline branch already, skip baseline comparison
+          if [ "$current_branch" = "$BASELINE_REF" ] || [ "${{ github.ref }}" = "refs/heads/$BASELINE_REF" ]; then
+            echo "📝 Already on target baseline branch ($BASELINE_REF), skipping baseline comparison"
+            echo "This run will establish new baseline after completion"
+            touch "benchmark-results/baseline-${{ matrix.goarch }}.txt"
+            echo "has_baseline=false" >> $GITHUB_OUTPUT
+            echo "baseline_source=none" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Strategy 3: Try to checkout the baseline branch/commit
+          echo "🔄 Attempting to checkout baseline: $BASELINE_REF"
+
+          # Try different checkout strategies
+          checkout_success=false
+
+          # Try 1: Direct checkout
           if git checkout "$BASELINE_REF" 2>/dev/null; then
             echo "✅ Successfully checked out $BASELINE_REF"
-            
-            # Run baseline benchmarks
-            echo "🏃 Running baseline benchmarks..."
+            checkout_success=true
+          # Try 2: Checkout with origin prefix  
+          elif git checkout "origin/$BASELINE_REF" 2>/dev/null; then
+            echo "✅ Successfully checked out origin/$BASELINE_REF"
+            checkout_success=true
+          # Try 3: Fetch and checkout
+          elif git fetch origin "$BASELINE_REF:$BASELINE_REF" 2>/dev/null && git checkout "$BASELINE_REF" 2>/dev/null; then
+            echo "✅ Successfully fetched and checked out $BASELINE_REF"
+            checkout_success=true
+          fi
+
+          if [ "$checkout_success" = true ]; then
+            echo "🏃 Running baseline benchmarks on $BASELINE_REF..."
             go test -bench=. -benchmem -benchtime=5s -count=3 ./... | tee "benchmark-results/baseline-${{ matrix.goarch }}.txt" || true
             
             # Return to current commit
+            echo "🔄 Returning to original commit: $current_commit"
             git checkout "$current_commit"
             
             echo "has_baseline=true" >> $GITHUB_OUTPUT
+            echo "baseline_source=branch" >> $GITHUB_OUTPUT
           else
-            echo "⚠️ Could not checkout $BASELINE_REF, skipping comparison"
-            echo "has_baseline=false" >> $GITHUB_OUTPUT
+            echo "⚠️ Could not checkout $BASELINE_REF using any strategy"
+            echo "Proceeding without baseline comparison"
             touch "benchmark-results/baseline-${{ matrix.goarch }}.txt"
+            echo "has_baseline=false" >> $GITHUB_OUTPUT
+            echo "baseline_source=none" >> $GITHUB_OUTPUT
           fi
 
       - name: 📊 Generate performance analysis

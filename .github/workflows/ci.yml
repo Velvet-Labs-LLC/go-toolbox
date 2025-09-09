@@ -460,7 +460,7 @@ jobs:
             echo "✅ Binary testing completed" | tee -a binary-test-results/summary.txt
           fi
 
-      - name: 📤 Upload binary test results
+      - name: 📤 Upload binary test results (CI validation only)
         uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -496,10 +496,12 @@ jobs:
             ${{ env.CACHE_VERSION }}-${{ runner.os }}-go-release-
             ${{ env.CACHE_VERSION }}-${{ runner.os }}-go-
 
-      - name: Download all artifacts
+      - name: Download binary artifacts only
         uses: actions/download-artifact@v4
         with:
           path: artifacts
+          pattern: binaries-*
+          merge-multiple: true
 
       - name: Prepare release assets
         run: |

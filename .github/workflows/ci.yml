@@ -377,7 +377,6 @@ jobs:
           mkdir -p release
           find artifacts -name "cli-*" -type f -exec cp {} release/ \;
           find artifacts -name "tui-*" -type f -exec cp {} release/ \;
-          find artifacts -name "web-*" -type f -exec cp {} release/ \;
 
       - name: Generate changelog
         id: changelog
@@ -386,14 +385,39 @@ jobs:
           echo "Changes in this release:" > CHANGELOG.md
           git log --pretty=format:"- %s" $(git describe --tags --abbrev=0 HEAD^)..HEAD >> CHANGELOG.md
 
-      - name: Create Release
+      - name: Check if release exists
+        id: release_exists
+        run: |
+          if gh release view ${{ github.ref_name }} > /dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload release assets to existing release
+        if: steps.release_exists.outputs.exists == 'true'
+        run: |
+          echo "Release already exists, uploading assets..."
+          for file in release/*; do
+            if [ -f "$file" ]; then
+              echo "Uploading $file..."
+              gh release upload ${{ github.ref_name }} "$file" --clobber
+            fi
+          done
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create new release
+        if: steps.release_exists.outputs.exists == 'false'
         uses: softprops/action-gh-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ github.ref }}
           name: Release ${{ github.ref_name }}
           body_path: CHANGELOG.md
           draft: false
           prerelease: false
           files: release/*
+          generate_release_notes: true

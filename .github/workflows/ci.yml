@@ -468,6 +468,7 @@ jobs:
           path: |
             binary-test-results/
           retention-days: 7
+          if-no-files-found: ignore
 
   release:
     name: 🚀 Release
@@ -505,6 +506,10 @@ jobs:
 
       - name: 🎁 Prepare release assets
         run: |
+          # Debug: Show what we downloaded
+          echo "📁 Downloaded artifacts:"
+          find artifacts -type f | head -20 || echo "No artifacts found"
+
           mkdir -p release/cli release/tui release/unified
 
           # Organize unified binaries (single all-in-one binary)
@@ -519,6 +524,10 @@ jobs:
           echo "🎁 Organizing TUI binaries..."
           find artifacts -path "*/bin/tui/*" -type f -exec cp {} release/tui/ \; || echo "No TUI binaries found"
 
+          # Debug: Show what got organized
+          echo "📁 Organized binaries:"
+          find release/ -type f | head -10 || echo "No files in release directory"
+
           # Create unified binary archives (recommended download)
           if [ "$(ls -A release/unified 2>/dev/null)" ]; then
             echo "📦 Creating unified binary archives..."
@@ -526,6 +535,8 @@ jobs:
             zip -r go-toolbox-unified-${GITHUB_REF_NAME:-latest}.zip unified/
             tar -czf go-toolbox-unified-${GITHUB_REF_NAME:-latest}.tar.gz unified/
             cd ..
+          else
+            echo "⚠️ No unified binaries found to archive"
           fi
 
           # Create archive packages for each type
@@ -566,6 +577,8 @@ jobs:
           # List what was created
           echo "📦 Release structure:"
           ls -la release/
+          echo "📦 Created archives:"
+          ls -la release/*.zip release/*.tar.gz 2>/dev/null || echo "No archives created"
           if [ -d release/unified ]; then
             echo "📦 Unified binaries:"
             ls -la release/unified/
@@ -601,12 +614,62 @@ jobs:
         if: steps.release_exists.outputs.exists == 'true'
         run: |
           echo "🔄 Release already exists, uploading assets..."
-          for file in release/*; do
+
+          # Debug: Show what files exist
+          echo "📁 Files in release directory:"
+          ls -la release/ || echo "No release directory found"
+          echo "📁 All files in release (including subdirectories):"
+          find release/ -type f || echo "No files found in release directory"
+
+          # Check if we have any archives
+          archive_count=0
+          for file in release/*.zip release/*.tar.gz; do
             if [ -f "$file" ]; then
-              echo "📤 Uploading $file..."
-              gh release upload ${{ github.ref_name }} "$file" --clobber
+              archive_count=$((archive_count + 1))
             fi
           done
+
+          echo "📊 Found $archive_count archive files"
+
+          # Upload archive files from release directory
+          uploaded_files=0
+          for file in release/*.zip release/*.tar.gz; do
+            if [ -f "$file" ]; then
+              echo "📤 Uploading $file..."
+              if gh release upload ${{ github.ref_name }} "$file" --clobber; then
+                echo "✅ Successfully uploaded: $file"
+                uploaded_files=$((uploaded_files + 1))
+              else
+                echo "❌ Failed to upload: $file"
+              fi
+            fi
+          done
+
+          # Also upload individual binaries if no archives were created
+          if [ $archive_count -eq 0 ]; then
+            echo "📦 No archives found, uploading individual binaries..."
+            for dir in release/unified release/cli release/tui; do
+              if [ -d "$dir" ]; then
+                for file in "$dir"/*; do
+                  if [ -f "$file" ]; then
+                    echo "📤 Uploading individual binary: $file..."
+                    if gh release upload ${{ github.ref_name }} "$file" --clobber; then
+                      echo "✅ Successfully uploaded: $file"
+                      uploaded_files=$((uploaded_files + 1))
+                    else
+                      echo "❌ Failed to upload: $file"
+                    fi
+                  fi
+                done
+              fi
+            done
+          fi
+
+          echo "📊 Total files uploaded: $uploaded_files"
+
+          # Final verification - show what's in the release now
+          echo "🔍 Final release contents:"
+          gh release view ${{ github.ref_name }} --json assets --jq '.assets[].name' | sort || echo "Could not list release assets"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

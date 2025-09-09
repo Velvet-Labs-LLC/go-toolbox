@@ -1,12 +1,12 @@
 name: 🚀 CI Pipeline
 
-# Cache Strategy:
-# - Each job type has its own cache namespace (test, format, lint, security, build, release)
-# - Build jobs include matrix variables (goos/goarch) in cache keys for platform-specific builds
-# - Primary cache key: CACHE_VERSION-OS-job-dependencies_hash
-# - Fallback keys enable partial cache hits across similar contexts
-# - CACHE_VERSION allows global cache invalidation when needed
-# - Removed github.run_id to enable proper cache sharing between runs
+# Cache Strategy for Self-Hosted Runners:
+# - Use unique cache keys per job to prevent conflicts
+# - Separate Go module cache from build cache
+# - Include runner name/labels in cache keys for isolation
+# - Use restore-keys with fallbacks for cache efficiency
+# - Avoid shared cache conflicts by using job-specific prefixes
+# - Leverage GOCACHE and GOMODCACHE environment variables
 
 on:
   push:
@@ -17,8 +17,11 @@ on:
   workflow_dispatch: # Allow manual trigger
 
 env:
-  GO_VERSION: "1.24"
-  CACHE_VERSION: "v1" # Increment this to invalidate all caches
+  GO_VERSION: "1.24.0"
+  CACHE_VERSION: "v2" # Increment this to invalidate all caches
+  # Optimize for self-hosted runners
+  GOCACHE: "/tmp/go-build-cache"
+  GOMODCACHE: "/tmp/go-mod-cache"
 
 permissions:
   contents: write # Required for creating releases and uploading assets
@@ -28,27 +31,40 @@ permissions:
 jobs:
   test:
     name: 🧪 Test Suite
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
 
       - name: 🔧 Set up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
+          cache: false # We'll handle caching manually for better control
 
-      # Cache Go modules and build cache for better performance
+      - name: 📁 Create cache directories
+        run: |
+          mkdir -p ${{ env.GOCACHE }}
+          mkdir -p ${{ env.GOMODCACHE }}
+
       - name: 💾 Cache Go modules
         uses: actions/cache@v4
         with:
-          path: |
-            ~/go/pkg/mod
-            ~/.cache/go-build
-          key: ${{ env.CACHE_VERSION }}-${{ runner.os }}-go-test-${{ hashFiles('**/go.sum') }}
+          path: ${{ env.GOMODCACHE }}
+          key: ${{ env.CACHE_VERSION }}-${{ runner.name }}-go-mod-test-${{ hashFiles('**/go.sum') }}
           restore-keys: |
-            ${{ env.CACHE_VERSION }}-${{ runner.os }}-go-test-
-            ${{ env.CACHE_VERSION }}-${{ runner.os }}-go-
+            ${{ env.CACHE_VERSION }}-${{ runner.name }}-go-mod-test-
+            ${{ env.CACHE_VERSION }}-${{ runner.name }}-go-mod-
+
+      - name: 💾 Cache Go build cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.GOCACHE }}
+          key: ${{ env.CACHE_VERSION }}-${{ runner.name }}-go-build-test-${{ hashFiles('**/*.go') }}-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ env.CACHE_VERSION }}-${{ runner.name }}-go-build-test-${{ hashFiles('**/*.go') }}-
+            ${{ env.CACHE_VERSION }}-${{ runner.name }}-go-build-test-
+            ${{ env.CACHE_VERSION }}-${{ runner.name }}-go-build-
 
       - name: 📦 Download dependencies
         run: go mod download
@@ -128,7 +144,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: test-results
+          name: test-results-${{ github.run_id }}
           path: |
             test-results/
             coverage.out
@@ -141,32 +157,49 @@ jobs:
           make build
 
       - name: 📊 Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4
         with:
           file: ./coverage.out
 
   format:
     name: 🎨 Format Check
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
 
       - name: 🔧 Set up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
+          cache: false
+
+      - name: � Create cache directories
+        run: |
+          mkdir -p ${{ env.GOCACHE }}
+          mkdir -p ${{ env.GOMODCACHE }}
 
       - name: 💾 Cache Go modules
         uses: actions/cache@v4
         with:
-          path: |
-            ~/go/pkg/mod
-            ~/.cache/go-build
-          key: ${{ env.CACHE_VERSION }}-${{ runner.os }}-go-format-${{ hashFiles('**/go.sum') }}
+          path: ${{ env.GOMODCACHE }}
+          key: ${{ env.CACHE_VERSION }}-${{ runner.name }}-go-mod-format-${{ hashFiles('**/go.sum') }}
           restore-keys: |
-            ${{ env.CACHE_VERSION }}-${{ runner.os }}-go-format-
-            ${{ env.CACHE_VERSION }}-${{ runner.os }}-go-
+            ${{ env.CACHE_VERSION }}-${{ runner.name }}-go-mod-format-
+            ${{ env.CACHE_VERSION }}-${{ runner.name }}-go-mod-
+
+      - name: 💾 Cache Go build cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.GOCACHE }}
+          key: ${{ env.CACHE_VERSION }}-${{ runner.name }}-go-build-format-${{ hashFiles('**/*.go') }}-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ env.CACHE_VERSION }}-${{ runner.name }}-go-build-format-${{ hashFiles('**/*.go') }}-
+            ${{ env.CACHE_VERSION }}-${{ runner.name }}-go-build-format-
+            ${{ env.CACHE_VERSION }}-${{ runner.name }}-go-build-
+
+      - name: 📦 Download dependencies
+        run: go mod download
 
       - name: ✨ Check formatting
         run: |
@@ -181,64 +214,97 @@ jobs:
 
   lint:
     name: 🔍 Lint Check
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
 
       - name: 🔧 Set up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
+          cache: false
+
+      - name: � Create cache directories
+        run: |
+          mkdir -p ${{ env.GOCACHE }}
+          mkdir -p ${{ env.GOMODCACHE }}
 
       - name: 💾 Cache Go modules
         uses: actions/cache@v4
         with:
-          path: |
-            ~/go/pkg/mod
-            ~/.cache/go-build
-          key: ${{ env.CACHE_VERSION }}-${{ runner.os }}-go-lint-${{ hashFiles('**/go.sum') }}
+          path: ${{ env.GOMODCACHE }}
+          key: ${{ env.CACHE_VERSION }}-${{ runner.name }}-go-mod-lint-${{ hashFiles('**/go.sum') }}
           restore-keys: |
-            ${{ env.CACHE_VERSION }}-${{ runner.os }}-go-lint-
-            ${{ env.CACHE_VERSION }}-${{ runner.os }}-go-
+            ${{ env.CACHE_VERSION }}-${{ runner.name }}-go-mod-lint-
+            ${{ env.CACHE_VERSION }}-${{ runner.name }}-go-mod-
+
+      - name: 💾 Cache Go build cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.GOCACHE }}
+          key: ${{ env.CACHE_VERSION }}-${{ runner.name }}-go-build-lint-${{ hashFiles('**/*.go') }}-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ env.CACHE_VERSION }}-${{ runner.name }}-go-build-lint-${{ hashFiles('**/*.go') }}-
+            ${{ env.CACHE_VERSION }}-${{ runner.name }}-go-build-lint-
+            ${{ env.CACHE_VERSION }}-${{ runner.name }}-go-build-
+
+      - name: 📦 Download dependencies
+        run: go mod download
 
       - name: 🧹 golangci-lint
         uses: golangci/golangci-lint-action@v8.0.0
         with:
-          version: v2.4.0
+          version: latest
           args: --timeout=10m
+          # Use our custom cache paths
+          skip-cache: true
 
   security:
     name: 🔒 Security Scan
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
 
       - name: 🔧 Set up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
+          cache: false
+
+      - name: � Create cache directories
+        run: |
+          mkdir -p ${{ env.GOCACHE }}
+          mkdir -p ${{ env.GOMODCACHE }}
 
       - name: 💾 Cache Go modules
         uses: actions/cache@v4
         with:
-          path: |
-            ~/go/pkg/mod
-            ~/.cache/go-build
-          key: ${{ env.CACHE_VERSION }}-${{ runner.os }}-go-security-${{ hashFiles('**/go.sum') }}
+          path: ${{ env.GOMODCACHE }}
+          key: ${{ env.CACHE_VERSION }}-${{ runner.name }}-go-mod-security-${{ hashFiles('**/go.sum') }}
           restore-keys: |
-            ${{ env.CACHE_VERSION }}-${{ runner.os }}-go-security-
-            ${{ env.CACHE_VERSION }}-${{ runner.os }}-go-
+            ${{ env.CACHE_VERSION }}-${{ runner.name }}-go-mod-security-
+            ${{ env.CACHE_VERSION }}-${{ runner.name }}-go-mod-
+
+      - name: 📦 Download dependencies
+        run: go mod download
 
       - name: 🛡️ Run Gosec Security Scanner
-        uses: securego/gosec@v2.22.8
-        with:
-          args: "./..."
+        run: |
+          # Install gosec if not available
+          if ! command -v gosec &> /dev/null; then
+            echo "📥 Installing gosec..."
+            go install github.com/securecodewarrior/gosec/v2/cmd/gosec@latest
+          fi
+
+          # Run gosec security scan
+          echo "🛡️ Running security scan..."
+          gosec ./...
 
   build:
     name: 🏗️ Build Matrix
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs: [test, format, lint, security]
     strategy:
       matrix:
@@ -253,21 +319,35 @@ jobs:
         uses: actions/checkout@v4
 
       - name: 🔧 Set up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
+          cache: false
+
+      - name: � Create cache directories
+        run: |
+          mkdir -p ${{ env.GOCACHE }}
+          mkdir -p ${{ env.GOMODCACHE }}
 
       - name: 💾 Cache Go modules
         uses: actions/cache@v4
         with:
-          path: |
-            ~/go/pkg/mod
-            ~/.cache/go-build
-          key: ${{ env.CACHE_VERSION }}-${{ runner.os }}-go-build-${{ matrix.goos }}-${{ matrix.goarch }}-${{ hashFiles('**/go.sum') }}
+          path: ${{ env.GOMODCACHE }}
+          key: ${{ env.CACHE_VERSION }}-${{ runner.name }}-go-mod-build-${{ matrix.goos }}-${{ matrix.goarch }}-${{ hashFiles('**/go.sum') }}
           restore-keys: |
-            ${{ env.CACHE_VERSION }}-${{ runner.os }}-go-build-${{ matrix.goos }}-${{ matrix.goarch }}-
-            ${{ env.CACHE_VERSION }}-${{ runner.os }}-go-build-
-            ${{ env.CACHE_VERSION }}-${{ runner.os }}-go-
+            ${{ env.CACHE_VERSION }}-${{ runner.name }}-go-mod-build-${{ matrix.goos }}-${{ matrix.goarch }}-
+            ${{ env.CACHE_VERSION }}-${{ runner.name }}-go-mod-build-
+            ${{ env.CACHE_VERSION }}-${{ runner.name }}-go-mod-
+
+      - name: 💾 Cache Go build cache (platform-specific)
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.GOCACHE }}
+          key: ${{ env.CACHE_VERSION }}-${{ runner.name }}-go-build-${{ matrix.goos }}-${{ matrix.goarch }}-${{ hashFiles('**/*.go') }}-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ env.CACHE_VERSION }}-${{ runner.name }}-go-build-${{ matrix.goos }}-${{ matrix.goarch }}-${{ hashFiles('**/*.go') }}-
+            ${{ env.CACHE_VERSION }}-${{ runner.name }}-go-build-${{ matrix.goos }}-${{ matrix.goarch }}-
+            ${{ env.CACHE_VERSION }}-${{ runner.name }}-go-build-
 
       - name: 📦 Download dependencies
         run: go mod download
@@ -322,7 +402,7 @@ jobs:
       - name: 📤 Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: binaries-${{ matrix.goos }}-${{ matrix.goarch }}
+          name: binaries-${{ matrix.goos }}-${{ matrix.goarch }}-${{ github.run_id }}
           path: |
             bin/unified/*
             bin/cli/*
@@ -344,7 +424,7 @@ jobs:
               chmod +x "$binary"
               
               # Binary size check
-              BINARY_SIZE=$(stat -f%z "$binary" 2>/dev/null || stat -c%s "$binary" 2>/dev/null || echo "0")
+              BINARY_SIZE=$(stat -c%s "$binary" 2>/dev/null || echo "0")
               echo "📦 Binary size: $(echo $BINARY_SIZE | awk '{printf "%.2f MB", $1/1024/1024}')"
               
               # Performance timing for startup
@@ -396,7 +476,7 @@ jobs:
               echo "🔨 Testing CLI: $binary..."
               chmod +x "$binary"
               
-              BINARY_SIZE=$(stat -f%z "$binary" 2>/dev/null || stat -c%s "$binary" 2>/dev/null || echo "0")
+              BINARY_SIZE=$(stat -c%s "$binary" 2>/dev/null || echo "0")
               START_TIME=$(date +%s%N)
               
               # Try to run with --help flag, most tools should support this
@@ -423,7 +503,7 @@ jobs:
               echo "🖥️ Testing TUI: $binary..."
               chmod +x "$binary"
               
-              BINARY_SIZE=$(stat -f%z "$binary" 2>/dev/null || stat -c%s "$binary" 2>/dev/null || echo "0")
+              BINARY_SIZE=$(stat -c%s "$binary" 2>/dev/null || echo "0")
               START_TIME=$(date +%s%N)
               
               # Try to run with --help flag, most tools should support this
@@ -464,7 +544,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: binary-test-results-${{ matrix.goos }}-${{ matrix.goarch }}
+          name: binary-test-results-${{ matrix.goos }}-${{ matrix.goarch }}-${{ github.run_id }}
           path: |
             binary-test-results/
           retention-days: 7
@@ -472,7 +552,7 @@ jobs:
 
   release:
     name: 🚀 Release
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs: [test, format, lint, security, build]
     if: startsWith(github.ref, 'refs/tags/v')
     steps:
@@ -482,26 +562,33 @@ jobs:
           fetch-depth: 0
 
       - name: 🔧 Set up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
+          cache: false
+
+      - name: � Create cache directories
+        run: |
+          mkdir -p ${{ env.GOCACHE }}
+          mkdir -p ${{ env.GOMODCACHE }}
 
       - name: 💾 Cache Go modules
         uses: actions/cache@v4
         with:
-          path: |
-            ~/go/pkg/mod
-            ~/.cache/go-build
-          key: ${{ env.CACHE_VERSION }}-${{ runner.os }}-go-release-${{ hashFiles('**/go.sum') }}
+          path: ${{ env.GOMODCACHE }}
+          key: ${{ env.CACHE_VERSION }}-${{ runner.name }}-go-mod-release-${{ hashFiles('**/go.sum') }}
           restore-keys: |
-            ${{ env.CACHE_VERSION }}-${{ runner.os }}-go-release-
-            ${{ env.CACHE_VERSION }}-${{ runner.os }}-go-
+            ${{ env.CACHE_VERSION }}-${{ runner.name }}-go-mod-release-
+            ${{ env.CACHE_VERSION }}-${{ runner.name }}-go-mod-
+
+      - name: 📦 Download dependencies
+        run: go mod download
 
       - name: Download binary artifacts only
         uses: actions/download-artifact@v4
         with:
           path: artifacts
-          pattern: binaries-*
+          pattern: binaries-*-${{ github.run_id }}
           merge-multiple: true
 
       - name: 🎁 Prepare release assets

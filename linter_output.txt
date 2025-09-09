@@ -2,18 +2,9 @@
 cmd/cli/serve/main.go:1:1: the average complexity for the package main is 10.333333, max is 10.000000 (cyclop)
 package main
 ^
-internal/cli/cli.go:166:18: Error return value of `t.writer.Append` is not checked (errcheck)
-		t.writer.Append(toInterfaceSlice(row)...)
-		               ^
-internal/cli/cli.go:170:17: Error return value of `t.writer.Render` is not checked (errcheck)
-	t.writer.Render()
-	               ^
-internal/cli/cli.go:207:11: Error return value of `p.bar.Add` is not checked (errcheck)
-	p.bar.Add(num)
-	         ^
-internal/cli/cli.go:212:14: Error return value of `p.bar.Finish` is not checked (errcheck)
-	p.bar.Finish()
-	            ^
+cmd/cli/serve/main.go:61:2: use of `fmt.Printf` forbidden by pattern `^(fmt\.Print(|f|ln)|print|println)$` (forbidigo)
+	fmt.Printf("Serving %s on %s://%s:%d (accessible on your LAN)\n", dir, scheme, ip, listenPort)
+	^
 examples/basic/main.go:12:2: use of `fmt.Println` forbidden by pattern `^(fmt\.Print(|f|ln)|print|println)$` (forbidigo)
 	fmt.Println("Go Toolbox Examples")
 	^
@@ -155,15 +146,12 @@ examples/basic/main.go:187:4: use of `fmt.Printf` forbidden by pattern `^(fmt\.P
 examples/basic/main.go:189:4: use of `fmt.Printf` forbidden by pattern `^(fmt\.Print(|f|ln)|print|println)$` (forbidigo)
 			fmt.Printf("✗ Invalid email: %s\n", email)
 			^
-internal/cli/cli.go:87:3: use of `fmt.Printf` forbidden by pattern `^(fmt\.Print(|f|ln)|print|println)$` (forbidigo)
-		fmt.Printf(format+"\n", args...)
-		^
-internal/cli/cli.go:96:3: use of `fmt.Printf` forbidden by pattern `^(fmt\.Print(|f|ln)|print|println)$` (forbidigo)
-		fmt.Printf(format+"\n", args...)
-		^
-internal/cli/cli.go:105:3: use of `fmt.Printf` forbidden by pattern `^(fmt\.Print(|f|ln)|print|println)$` (forbidigo)
-		fmt.Printf(format+"\n", args...)
-		^
+internal/cli/cli.go:84:10: use of `fmt.Printf` forbidden by pattern `^(fmt\.Print(|f|ln)|print|println)$` (forbidigo)
+		_, _ = fmt.Printf(format+"\n", args...)
+		       ^
+internal/cli/cli.go:93:10: use of `fmt.Printf` forbidden by pattern `^(fmt\.Print(|f|ln)|print|println)$` (forbidigo)
+		_, _ = fmt.Printf(format+"\n", args...)
+		       ^
 examples/basic/main.go:11:6: Function 'main' has too many statements (59 > 50) (funlen)
 func main() {
      ^
@@ -182,19 +170,19 @@ cmd/tui/main/main.go:45:2: helpStyle is a global variable (gochecknoglobals)
 cmd/tui/main/main.go:50:2: quitTextStyle is a global variable (gochecknoglobals)
 	quitTextStyle = lipgloss.NewStyle().
 	^
-internal/cli/cli.go:49:2: InfoColor is a global variable (gochecknoglobals)
+internal/cli/cli.go:46:2: InfoColor is a global variable (gochecknoglobals)
 	InfoColor    = color.New(color.FgCyan)
 	^
-internal/cli/cli.go:50:2: SuccessColor is a global variable (gochecknoglobals)
+internal/cli/cli.go:47:2: SuccessColor is a global variable (gochecknoglobals)
 	SuccessColor = color.New(color.FgGreen)
 	^
-internal/cli/cli.go:51:2: WarnColor is a global variable (gochecknoglobals)
+internal/cli/cli.go:48:2: WarnColor is a global variable (gochecknoglobals)
 	WarnColor    = color.New(color.FgYellow)
 	^
-internal/cli/cli.go:52:2: ErrorColor is a global variable (gochecknoglobals)
+internal/cli/cli.go:49:2: ErrorColor is a global variable (gochecknoglobals)
 	ErrorColor   = color.New(color.FgRed)
 	^
-internal/cli/cli.go:53:2: HeaderColor is a global variable (gochecknoglobals)
+internal/cli/cli.go:50:2: HeaderColor is a global variable (gochecknoglobals)
 	HeaderColor  = color.New(color.FgBlue, color.Bold)
 	^
 internal/config/config.go:47:5: globalConfig is a global variable (gochecknoglobals)
@@ -233,6 +221,12 @@ cmd/tui/main/main.go:324:2: singleCaseSwitch: should rewrite switch statement to
 cmd/tui/main/main.go:360:2: singleCaseSwitch: should rewrite switch statement to if statement (gocritic)
 	switch msg := msg.(type) {
 	^
+cmd/cli/serve/main.go:94:1: Comment should end in a period (godot)
+// generateSelfSignedCert returns PEM-encoded cert and key as strings
+^
+cmd/cli/serve/main.go:120:1: Comment should end in a period (godot)
+// getLocalIP returns the first non-loopback, non-link-local IPv4 address
+^
 cmd/tui/main/main.go:17:1: Comment should end in a period (godot)
 // Constants for UI styling
 ^
@@ -377,30 +371,6 @@ pkg/utils/utils.go:233:1: Comment should end in a period (godot)
 pkg/utils/utils.go:251:1: Comment should end in a period (godot)
 // ReadLines reads all lines from a file
 ^
-pkg/utils/utils.go:267:1: Comment should end in a period (godot)
-// WriteLines writes lines to a file
-^
-pkg/utils/utils.go:273:1: Comment should end in a period (godot)
-// Glob returns all files matching a pattern
-^
-internal/cli/cli.go:83:1: printf-like formatting function 'PrintInfo' should be named 'PrintInfof' (goprintffuncname)
-func (c *BaseCommand) PrintInfo(format string, args ...interface{}) {
-^
-internal/cli/cli.go:92:1: printf-like formatting function 'PrintSuccess' should be named 'PrintSuccessf' (goprintffuncname)
-func (c *BaseCommand) PrintSuccess(format string, args ...interface{}) {
-^
-internal/cli/cli.go:101:1: printf-like formatting function 'PrintWarn' should be named 'PrintWarnf' (goprintffuncname)
-func (c *BaseCommand) PrintWarn(format string, args ...interface{}) {
-^
-internal/cli/cli.go:110:1: printf-like formatting function 'PrintError' should be named 'PrintErrorf' (goprintffuncname)
-func (c *BaseCommand) PrintError(format string, args ...interface{}) {
-^
-internal/cli/cli.go:119:1: printf-like formatting function 'PrintHeader' should be named 'PrintHeaderf' (goprintffuncname)
-func (c *BaseCommand) PrintHeader(format string, args ...interface{}) {
-^
-internal/cli/cli.go:128:1: printf-like formatting function 'PrintVerbose' should be named 'PrintVerbosef' (goprintffuncname)
-func (c *BaseCommand) PrintVerbose(format string, args ...interface{}) {
-^
 cmd/cli/serve/main.go:74:11: G112: Potential Slowloris Attack because ReadHeaderTimeout is not configured in the http.Server (gosec)
 		srv := &http.Server{Addr: addr, Handler: nil}
 		        ^
@@ -410,33 +380,6 @@ cmd/cli/serve/main.go:84:21: G402: TLS MinVersion too low. (gosec)
 cmd/cli/serve/main.go:90:13: G114: Use of net/http serve function that has no support for setting timeouts (gosec)
 		log.Fatal(http.ListenAndServe(addr, nil))
 		          ^
-internal/cli/cli.go:85:3: G104: Errors unhandled (gosec)
-		InfoColor.Printf(format+"\n", args...)
-		^
-internal/cli/cli.go:94:3: G104: Errors unhandled (gosec)
-		SuccessColor.Printf(format+"\n", args...)
-		^
-internal/cli/cli.go:103:3: G104: Errors unhandled (gosec)
-		WarnColor.Printf(format+"\n", args...)
-		^
-internal/cli/cli.go:112:3: G104: Errors unhandled (gosec)
-		ErrorColor.Printf(format+"\n", args...)
-		^
-internal/cli/cli.go:121:3: G104: Errors unhandled (gosec)
-		HeaderColor.Printf(format+"\n", args...)
-		^
-internal/logger/logger.go:192:2: G104: Errors unhandled (gosec)
-	color.New(color.FgHiBlack).Fprintf(h.output, "%s ", timestamp)
-	^
-internal/logger/logger.go:193:2: G104: Errors unhandled (gosec)
-	levelColor.Fprintf(h.output, "[%s] ", levelText)
-	^
-internal/logger/logger.go:197:3: G104: Errors unhandled (gosec)
-		color.New(color.FgRed).Fprintf(h.output, "%s", record.Message)
-		^
-internal/logger/logger.go:204:3: G104: Errors unhandled (gosec)
-		color.New(color.FgHiBlack).Fprintf(h.output, " %s=%v", attr.Key, attr.Value)
-		^
 pkg/utils/utils.go:345:23: G404: Use of weak random number generator (math/rand or math/rand/v2 instead of crypto/rand) (gosec)
 		result[i] = charset[rand.IntN(len(charset))]
 		                    ^
@@ -503,16 +446,10 @@ cmd/cli/serve/main.go:45:1: `if *tlsFlag` has complex nested blocks (complexity:
 cmd/cli/serve/main.go:65:1: `if *tlsFlag` has complex nested blocks (complexity: 8) (nestif)
 	if *tlsFlag {
 ^
-cmd/cli/main/main.go:162:32: unused-parameter: parameter 'args' seems to be unused, consider removing or renaming it as _ (revive)
-		RunE: func(_ *cobra.Command, args []string) error {
-		                             ^
 cmd/cli/serve/main.go:86:10: superfluous-else: if block ends with call to log.Fatal function, so drop this else and outdent its block (revive)
 		} else {
 			log.Fatal(srv.ListenAndServeTLS(cert, key))
 		}
-internal/logger/logger.go:166:40: unused-parameter: parameter 'ctx' seems to be unused, consider removing or renaming it as _ (revive)
-func (h *ColorHandler) handleWithColor(ctx context.Context, record slog.Record) error {
-                                       ^
 pkg/utils/utils.go:2:9: var-naming: avoid meaningless package names (revive)
 package utils
         ^
@@ -522,12 +459,8 @@ pkg/utils/utils_test.go:224:3: redefines-builtin-id: redefinition of the built-i
 pkg/utils/utils_test.go:1:9: package should be `utils_test` instead of `utils` (testpackage)
 package utils
         ^
-internal/cli/cli.go:44:2: const minTruncateLength is unused (unused)
-	minTruncateLength = 3
-	^
-175 issues:
+153 issues:
 * cyclop: 1
-* errcheck: 4
 * forbidigo: 50
 * funlen: 1
 * gochecknoglobals: 12
@@ -536,12 +469,10 @@ internal/cli/cli.go:44:2: const minTruncateLength is unused (unused)
 * goconst: 1
 * gocritic: 7
 * godot: 50
-* goprintffuncname: 6
-* gosec: 16
+* gosec: 7
 * govet: 4
 * intrange: 3
 * mnd: 9
 * nestif: 2
-* revive: 5
+* revive: 3
 * testpackage: 1
-* unused: 1

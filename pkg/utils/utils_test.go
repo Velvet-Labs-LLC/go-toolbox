@@ -1,12 +1,14 @@
-package utils
+package utils_test
 
 import (
 	"fmt"
 	"testing"
+
+	"github.com/nate3d/toolbox/pkg/utils"
 )
 
 func TestStringUtils(t *testing.T) {
-	str := String()
+	str := utils.String()
 
 	t.Run("IsEmpty", func(t *testing.T) {
 		tests := []struct {
@@ -87,7 +89,7 @@ func TestStringUtils(t *testing.T) {
 }
 
 func TestSliceUtils(t *testing.T) {
-	slice := Slice()
+	slice := utils.Slice()
 
 	t.Run("Contains", func(t *testing.T) {
 		testSlice := []string{"apple", "banana", "cherry"}
@@ -141,7 +143,7 @@ func TestSliceUtils(t *testing.T) {
 }
 
 func TestValidationUtils(t *testing.T) {
-	validate := Validate()
+	validate := utils.Validate()
 
 	t.Run("Email", func(t *testing.T) {
 		tests := []struct {
@@ -185,7 +187,7 @@ func TestValidationUtils(t *testing.T) {
 }
 
 func TestHashUtils(t *testing.T) {
-	hash := Hash()
+	hash := utils.Hash()
 
 	t.Run("MD5", func(t *testing.T) {
 		input := "hello world"
@@ -209,7 +211,7 @@ func TestHashUtils(t *testing.T) {
 }
 
 func TestRandomUtils(t *testing.T) {
-	random := Random()
+	random := utils.Random()
 
 	t.Run("String", func(t *testing.T) {
 		length := 10
@@ -221,11 +223,11 @@ func TestRandomUtils(t *testing.T) {
 	})
 
 	t.Run("Int", func(t *testing.T) {
-		min, max := 5, 15
-		result := random.Int(min, max)
+		myMin, myMax := 5, 15
+		result := random.Int(myMin, myMax)
 
-		if result < min || result > max {
-			t.Errorf("Int(%d, %d) = %d, expected value between %d and %d", min, max, result, min, max)
+		if result < myMin || result > myMax {
+			t.Errorf("Int(%d, %d) = %d, expected value between %d and %d", myMin, myMax, result, myMin, myMax)
 		}
 	})
 
@@ -233,7 +235,7 @@ func TestRandomUtils(t *testing.T) {
 		choices := []string{"apple", "banana", "cherry"}
 		result := random.Choice(choices)
 
-		slice := Slice()
+		slice := utils.Slice()
 		if !slice.Contains(choices, result) {
 			t.Errorf("Choice(%v) = %q, expected one of %v", choices, result, choices)
 		}
@@ -241,24 +243,24 @@ func TestRandomUtils(t *testing.T) {
 }
 
 func BenchmarkStringReverse(b *testing.B) {
-	str := String()
+	str := utils.String()
 	input := "hello world this is a test string"
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		str.Reverse(input)
 	}
 }
 
 func BenchmarkSliceUnique(b *testing.B) {
-	slice := Slice()
+	slice := utils.Slice()
 	input := make([]string, 1000)
-	for i := 0; i < 1000; i++ {
+	for i := range 1000 {
 		input[i] = fmt.Sprintf("item_%d", i%100) // Creates duplicates
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		slice.Unique(input)
 	}
 }

@@ -9,6 +9,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 
 	"github.com/nate3d/toolbox/internal/config"
+	"github.com/nate3d/toolbox/internal/generator"
 	"github.com/nate3d/toolbox/internal/logger"
 )
 
@@ -69,6 +70,7 @@ func initialModel() model {
 			"String Utilities",
 			"Random Generators",
 			"Configuration",
+			"🛠️  Tool Generator",
 			"Exit",
 		},
 		selected: make(map[int]struct{}),
@@ -160,6 +162,8 @@ func (m model) handleMenuSelection() (tea.Model, tea.Cmd) {
 		return NewRandomGenModel(), nil
 	case 5: // Configuration
 		return NewConfigModel(), nil
+	case 6: // Tool Generator
+		return generator.NewGeneratorModel(), nil
 	}
 	return m, nil
 }

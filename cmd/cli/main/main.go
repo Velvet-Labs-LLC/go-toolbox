@@ -159,7 +159,7 @@ func createUtilsCommand() *cobra.Command {
 	randomCmd := &cobra.Command{
 		Use:   "random",
 		Short: "Generate random strings",
-		RunE: func(_ *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			return runRandomGenerator(baseCmd)
 		},
 	}
@@ -183,18 +183,18 @@ func createUtilsCommand() *cobra.Command {
 // Command implementations
 
 func runFileHash(cmd *cli.BaseCommand, filename string) error {
-	cmd.PrintHeader("File Hash Calculator")
-	cmd.PrintInfo("Calculating hashes for: %s", filename)
+	cmd.PrintHeaderf("File Hash Calculator")
+	cmd.PrintInfof("Calculating hashes for: %s", filename)
 
 	// This would be implemented using pkg/file utilities
-	cmd.PrintSuccess("MD5: [would calculate MD5]")
-	cmd.PrintSuccess("SHA256: [would calculate SHA256]")
+	cmd.PrintSuccessf("MD5: [would calculate MD5]")
+	cmd.PrintSuccessf("SHA256: [would calculate SHA256]")
 
 	return nil
 }
 
 func runFileInfo(cmd *cli.BaseCommand, filename string) error {
-	cmd.PrintHeader("File Information")
+	cmd.PrintHeaderf("File Information")
 
 	// This would be implemented using pkg/file utilities
 	table := cli.NewTable([]string{"Property", "Value"})
@@ -208,17 +208,17 @@ func runFileInfo(cmd *cli.BaseCommand, filename string) error {
 }
 
 func runNetworkPing(cmd *cli.BaseCommand, host string) error {
-	cmd.PrintHeader("Ping %s", host)
+	cmd.PrintHeaderf("Ping %s", host)
 
 	// This would be implemented using pkg/network utilities
-	cmd.PrintInfo("PING %s", host)
-	cmd.PrintSuccess("64 bytes from %s: icmp_seq=1 time=1.234ms", host)
+	cmd.PrintInfof("PING %s", host)
+	cmd.PrintSuccessf("64 bytes from %s: icmp_seq=1 time=1.234ms", host)
 
 	return nil
 }
 
 func runPortScan(cmd *cli.BaseCommand, host string) error {
-	cmd.PrintHeader("Port Scan: %s", host)
+	cmd.PrintHeaderf("Port Scan: %s", host)
 
 	// This would be implemented using pkg/network utilities
 	table := cli.NewTable([]string{"Port", "State", "Service"})
@@ -231,7 +231,7 @@ func runPortScan(cmd *cli.BaseCommand, host string) error {
 }
 
 func runSystemInfo(cmd *cli.BaseCommand) error {
-	cmd.PrintHeader("System Information")
+	cmd.PrintHeaderf("System Information")
 
 	// This would be implemented using pkg/system utilities
 	table := cli.NewTable([]string{"Property", "Value"})
@@ -245,7 +245,7 @@ func runSystemInfo(cmd *cli.BaseCommand) error {
 }
 
 func runProcessList(cmd *cli.BaseCommand) error {
-	cmd.PrintHeader("Running Processes")
+	cmd.PrintHeaderf("Running Processes")
 
 	// This would be implemented using pkg/system utilities
 	table := cli.NewTable([]string{"PID", "Name", "CPU%", "Memory"})
@@ -257,7 +257,7 @@ func runProcessList(cmd *cli.BaseCommand) error {
 }
 
 func runRandomGenerator(cmd *cli.BaseCommand) error {
-	cmd.PrintHeader("Random String Generator")
+	cmd.PrintHeaderf("Random String Generator")
 
 	prompt := cli.NewPrompt()
 
@@ -267,31 +267,31 @@ func runRandomGenerator(cmd *cli.BaseCommand) error {
 	}
 
 	// This would use pkg/utils random utilities
-	cmd.PrintSuccess("Random string: [would generate random string of length %s]", lengthStr)
+	cmd.PrintSuccessf("Random string: [would generate random string of length %s]", lengthStr)
 
 	return nil
 }
 
 func runStringUtils(cmd *cli.BaseCommand, operation, text string) error {
-	cmd.PrintHeader("String Utilities")
+	cmd.PrintHeaderf("String Utilities")
 
 	// This would be implemented using pkg/utils string utilities
 	switch operation {
 	case "reverse":
-		cmd.PrintSuccess("Result: [would reverse '%s']", text)
+		cmd.PrintSuccessf("Result: [would reverse '%s']", text)
 	case "upper":
-		cmd.PrintSuccess("Result: [would uppercase '%s']", text)
+		cmd.PrintSuccessf("Result: [would uppercase '%s']", text)
 	case "lower":
-		cmd.PrintSuccess("Result: [would lowercase '%s']", text)
+		cmd.PrintSuccessf("Result: [would lowercase '%s']", text)
 	case "camel":
-		cmd.PrintSuccess("Result: [would convert '%s' to camelCase]", text)
+		cmd.PrintSuccessf("Result: [would convert '%s' to camelCase]", text)
 	case "snake":
-		cmd.PrintSuccess("Result: [would convert '%s' to snake_case]", text)
+		cmd.PrintSuccessf("Result: [would convert '%s' to snake_case]", text)
 	case "kebab":
-		cmd.PrintSuccess("Result: [would convert '%s' to kebab-case]", text)
+		cmd.PrintSuccessf("Result: [would convert '%s' to kebab-case]", text)
 	default:
-		cmd.PrintError("Unknown operation: %s", operation)
-		cmd.PrintInfo("Available operations: reverse, upper, lower, camel, snake, kebab")
+		cmd.PrintErrorf("Unknown operation: %s", operation)
+		cmd.PrintInfof("Available operations: reverse, upper, lower, camel, snake, kebab")
 		return fmt.Errorf("unknown operation: %s", operation)
 	}
 

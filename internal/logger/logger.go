@@ -162,8 +162,8 @@ func (h *ColorHandler) WithGroup(name string) slog.Handler {
 	}
 }
 
-// handleWithColor handles the record with color formatting
-func (h *ColorHandler) handleWithColor(ctx context.Context, record slog.Record) error {
+// handleWithColor handles the record with color formatting.
+func (h *ColorHandler) handleWithColor(_ context.Context, record slog.Record) error {
 	var levelColor *color.Color
 	var levelText string
 
@@ -189,23 +189,23 @@ func (h *ColorHandler) handleWithColor(ctx context.Context, record slog.Record) 
 	timestamp := record.Time.Format("2006-01-02 15:04:05")
 
 	// Write colored output
-	color.New(color.FgHiBlack).Fprintf(h.output, "%s ", timestamp)
-	levelColor.Fprintf(h.output, "[%s] ", levelText)
+	_, _ = color.New(color.FgHiBlack).Fprintf(h.output, "%s ", timestamp)
+	_, _ = levelColor.Fprintf(h.output, "[%s] ", levelText)
 
 	// Write message
 	if record.Level >= slog.LevelError {
-		color.New(color.FgRed).Fprintf(h.output, "%s", record.Message)
+		_, _ = color.New(color.FgRed).Fprintf(h.output, "%s", record.Message)
 	} else {
-		fmt.Fprintf(h.output, "%s", record.Message)
+		_, _ = fmt.Fprintf(h.output, "%s", record.Message)
 	}
 
 	// Write attributes
 	record.Attrs(func(attr slog.Attr) bool {
-		color.New(color.FgHiBlack).Fprintf(h.output, " %s=%v", attr.Key, attr.Value)
+		_, _ = color.New(color.FgHiBlack).Fprintf(h.output, " %s=%v", attr.Key, attr.Value)
 		return true
 	})
 
-	fmt.Fprintln(h.output)
+	_, _ = fmt.Fprintln(h.output)
 	return nil
 }
 

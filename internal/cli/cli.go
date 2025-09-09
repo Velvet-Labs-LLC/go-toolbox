@@ -39,9 +39,6 @@ const (
 	// Time conversion constants
 	msPerSecond = 1000
 	hoursPerDay = 24
-
-	// String truncation constants
-	minTruncateLength = 3
 )
 
 // Colors for different message types.
@@ -79,55 +76,55 @@ func NewBaseCommand(use, short string) *BaseCommand {
 	return baseCmd
 }
 
-// PrintInfo prints an info message.
-func (c *BaseCommand) PrintInfo(format string, args ...interface{}) {
+// PrintInfof prints an info message.
+func (c *BaseCommand) PrintInfof(format string, args ...interface{}) {
 	if c.Output == OutputTable {
-		InfoColor.Printf(format+"\n", args...)
+		_, _ = InfoColor.Printf(format+"\n", args...)
 	} else {
-		fmt.Printf(format+"\n", args...)
+		_, _ = fmt.Printf(format+"\n", args...)
 	}
 }
 
-// PrintSuccess prints a success message.
-func (c *BaseCommand) PrintSuccess(format string, args ...interface{}) {
+// PrintSuccessf prints a success message.
+func (c *BaseCommand) PrintSuccessf(format string, args ...interface{}) {
 	if c.Output == OutputTable {
-		SuccessColor.Printf(format+"\n", args...)
+		_, _ = SuccessColor.Printf(format+"\n", args...)
 	} else {
-		fmt.Printf(format+"\n", args...)
+		_, _ = fmt.Printf(format+"\n", args...)
 	}
 }
 
-// PrintWarn prints a warning message.
-func (c *BaseCommand) PrintWarn(format string, args ...interface{}) {
+// PrintWarnf prints a warning message.
+func (c *BaseCommand) PrintWarnf(format string, args ...interface{}) {
 	if c.Output == OutputTable {
-		WarnColor.Printf(format+"\n", args...)
+		_, _ = WarnColor.Printf(format+"\n", args...)
 	} else {
-		fmt.Printf(format+"\n", args...)
+		_, _ = fmt.Printf(format+"\n", args...)
 	}
 }
 
-// PrintError prints an error message.
-func (c *BaseCommand) PrintError(format string, args ...interface{}) {
+// PrintErrorf prints an error message.
+func (c *BaseCommand) PrintErrorf(format string, args ...interface{}) {
 	if c.Output == OutputTable {
-		ErrorColor.Printf(format+"\n", args...)
+		_, _ = ErrorColor.Printf(format+"\n", args...)
 	} else {
-		fmt.Printf(format+"\n", args...)
+		_, _ = fmt.Printf(format+"\n", args...)
 	}
 }
 
-// PrintHeader prints a header message.
-func (c *BaseCommand) PrintHeader(format string, args ...interface{}) {
+// PrintHeaderf prints a header message.
+func (c *BaseCommand) PrintHeaderf(format string, args ...interface{}) {
 	if c.Output == OutputTable {
-		HeaderColor.Printf(format+"\n", args...)
+		_, _ = HeaderColor.Printf(format+"\n", args...)
 	} else {
-		fmt.Printf(format+"\n", args...)
+		_, _ = fmt.Printf(format+"\n", args...)
 	}
 }
 
-// PrintVerbose prints a message only if verbose mode is enabled.
-func (c *BaseCommand) PrintVerbose(format string, args ...interface{}) {
+// PrintVerbosef prints a message only if verbose mode is enabled.
+func (c *BaseCommand) PrintVerbosef(format string, args ...interface{}) {
 	if c.Verbose {
-		c.PrintInfo(format, args...)
+		c.PrintInfof(format, args...)
 	}
 }
 
@@ -163,11 +160,11 @@ func (t *Table) Render() {
 
 	// Add all data rows
 	for _, row := range t.data {
-		t.writer.Append(toInterfaceSlice(row)...)
+		_ = t.writer.Append(toInterfaceSlice(row)...)
 	}
 
 	// Render the table
-	t.writer.Render()
+	_ = t.writer.Render()
 }
 
 // toInterfaceSlice converts []string to []interface{}.
@@ -204,12 +201,12 @@ func NewProgressBar(maxValue int, description string) *ProgressBar {
 
 // Add increments the progress bar.
 func (p *ProgressBar) Add(num int) {
-	p.bar.Add(num)
+	_ = p.bar.Add(num)
 }
 
 // Finish completes the progress bar.
 func (p *ProgressBar) Finish() {
-	p.bar.Finish()
+	_ = p.bar.Finish()
 }
 
 // Prompt provides utilities for user input.
@@ -307,7 +304,7 @@ func (s *Spinner) Start(message string) {
 			case <-s.stop:
 				return
 			default:
-				fmt.Printf("\r%s %s", s.chars[s.current], message)
+				_, _ = fmt.Printf("\r%s %s", s.chars[s.current], message)
 				s.current = (s.current + 1) % len(s.chars)
 				time.Sleep(spinnerSleepMs * time.Millisecond)
 			}
@@ -318,7 +315,7 @@ func (s *Spinner) Start(message string) {
 // Stop stops the spinner.
 func (s *Spinner) Stop() {
 	s.stop <- true
-	fmt.Print("\r")
+	_, _ = fmt.Print("\r")
 }
 
 // ParseSize parses a size string (e.g., "1KB", "2MB") into bytes.

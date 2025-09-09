@@ -18,6 +18,7 @@ YELLOW=\033[1;33m
 NC=\033[0m # No Color
 
 .PHONY: help build build-all clean test test-verbose test-coverage lint fmt vet run install deps tidy check-deps security update-deps
+	bench all
 
 ## help: Show this help message
 help:
@@ -164,6 +165,15 @@ dev-setup:
 install-hooks: ## Install Git pre-commit hooks
 	@echo "$(GREEN)Installing Git hooks...$(NC)"
 	@./scripts/install-hooks.sh
+
+## bench: Run benchmarks
+bench:
+	@echo "$(GREEN)Running benchmarks...$(NC)"
+	go test -bench=. ./...
+
+## all: Run full pipeline (clean, fmt, lint, test, bench, build)
+all: clean fmt lint test bench build
+	@echo "$(GREEN)All steps completed successfully!$(NC)"
 
 ## check: Run all checks (fmt, vet, lint, test)
 check: fmt vet lint test

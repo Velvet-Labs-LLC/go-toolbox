@@ -5,10 +5,8 @@ package main
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
-	"syscall"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -23,6 +21,12 @@ import (
 const (
 	appName    = "go-toolbox-embedded"
 	appVersion = "0.1.0"
+
+	modeTUI    = "tui"
+	modeUI     = "ui"
+	modeServe  = "serve"
+	modeServer = "server"
+	modeCLI    = "cli"
 )
 
 // Import TUI model components from the existing TUI implementation
@@ -91,11 +95,11 @@ func main() {
 	mode := detectMode()
 
 	switch mode {
-	case "tui", "ui":
+	case modeTUI, modeUI:
 		runTUIMode(os.Args[1:])
-	case "serve", "server":
+	case modeServe, modeServer:
 		runServerMode(os.Args[1:])
-	case "cli", "":
+	case modeCLI, "":
 		runCLIMode()
 	default:
 		runCLIMode() // Default to CLI mode
@@ -110,29 +114,23 @@ func detectMode() string {
 
 	// Handle common binary name patterns
 	switch {
-	case strings.HasSuffix(binaryName, "-tui") || binaryName == "toolbox-tui":
-		return "tui"
-	case strings.HasSuffix(binaryName, "-serve") || binaryName == "toolbox-serve":
-		return "serve"
-	case strings.HasSuffix(binaryName, "-cli") || binaryName == "toolbox-cli":
-		return "cli"
+	case strings.HasSuffix(binaryName, "-"+modeTUI) || binaryName == "toolbox-"+modeTUI:
+		return modeTUI
+	case strings.HasSuffix(binaryName, "-"+modeServe) || binaryName == "toolbox-"+modeServe:
+		return modeServe
+	case strings.HasSuffix(binaryName, "-"+modeCLI) || binaryName == "toolbox-"+modeCLI:
+		return modeCLI
 	}
 
 	// Check first argument
 	if len(os.Args) > 1 {
 		switch os.Args[1] {
-		case "tui", "ui":
-			// Remove the mode argument and pass the rest
-			os.Args = append([]string{os.Args[0]}, os.Args[2:]...)
-			return "tui"
-		case "serve", "server":
-			// Remove the mode argument and pass the rest
-			os.Args = append([]string{os.Args[0]}, os.Args[2:]...)
-			return "serve"
-		case "cli":
-			// Remove the mode argument and pass the rest
-			os.Args = append([]string{os.Args[0]}, os.Args[2:]...)
-			return "cli"
+		case modeTUI, modeUI:
+			return modeTUI
+		case modeServe, modeServer:
+			return modeServe
+		case modeCLI:
+			return modeCLI
 		}
 	}
 
@@ -177,10 +175,10 @@ func createRootCommand() *cobra.Command {
 
 func createTUICommand() *cobra.Command {
 	return &cobra.Command{
-		Use:   "tui",
+		Use:   modeTUI,
 		Short: "Start the Terminal User Interface",
 		Long:  "Launch the interactive terminal user interface for the toolbox.",
-		Run: func(cmd *cobra.Command, args []string) {
+		Run: func(_ *cobra.Command, args []string) {
 			runTUIMode(args)
 		},
 	}
@@ -188,7 +186,7 @@ func createTUICommand() *cobra.Command {
 
 func createServeCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "serve [directory]",
+		Use:   modeServe + " [directory]",
 		Short: "Start the HTTP file server",
 		Long:  "Start an HTTP server to serve files from a directory.",
 		Args:  cobra.MaximumNArgs(1),
@@ -221,7 +219,7 @@ func createFileCommand() *cobra.Command {
 		Use:   "hash [file]",
 		Short: "Calculate file hashes",
 		Args:  cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			return runFileHash(baseCmd, args[0])
 		},
 	}
@@ -231,7 +229,7 @@ func createFileCommand() *cobra.Command {
 		Use:   "info [file]",
 		Short: "Show file information",
 		Args:  cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			return runFileInfo(baseCmd, args[0])
 		},
 	}
@@ -250,7 +248,7 @@ func createNetworkCommand() *cobra.Command {
 		Use:   "ping [host]",
 		Short: "Ping a host",
 		Args:  cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			return runNetworkPing(baseCmd, args[0])
 		},
 	}
@@ -260,7 +258,7 @@ func createNetworkCommand() *cobra.Command {
 		Use:   "portscan [host]",
 		Short: "Scan ports on a host",
 		Args:  cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			return runPortScan(baseCmd, args[0])
 		},
 	}
@@ -277,7 +275,7 @@ func createSystemCommand() *cobra.Command {
 	infoCmd := &cobra.Command{
 		Use:   "info",
 		Short: "Show system information",
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			return runSystemInfo(baseCmd)
 		},
 	}
@@ -286,7 +284,7 @@ func createSystemCommand() *cobra.Command {
 	psCmd := &cobra.Command{
 		Use:   "ps",
 		Short: "List running processes",
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			return runProcessList(baseCmd)
 		},
 	}
@@ -303,7 +301,7 @@ func createUtilsCommand() *cobra.Command {
 	randomCmd := &cobra.Command{
 		Use:   "random",
 		Short: "Generate random strings",
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			return runRandomGenerator(baseCmd)
 		},
 	}
@@ -313,7 +311,7 @@ func createUtilsCommand() *cobra.Command {
 		Use:   "string [operation] [text]",
 		Short: "String manipulation utilities",
 		Args:  cobra.MinimumNArgs(2),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			return runStringUtils(baseCmd, args[0], args[1])
 		},
 	}
@@ -335,7 +333,7 @@ func createGenerateCommand() *cobra.Command {
 		Use:   "template [name]",
 		Short: "Generate a code template",
 		Args:  cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			return runTemplateGeneration(args[0])
 		},
 	}
@@ -611,7 +609,7 @@ func (m messageModel) View() string {
 }
 
 // runTUIMode starts the TUI application (reusing TUI structure)
-func runTUIMode(args []string) {
+func runTUIMode(_ []string) {
 	p := tea.NewProgram(initialEmbeddedTUIModel(), tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {
 		fmt.Printf("Error running TUI: %v", err)
@@ -625,7 +623,7 @@ func runServerMode(args []string) {
 }
 
 // runFileServer implements a simple file server using the pattern from cmd/cli/serve/main.go
-func runFileServer(args []string, tlsEnabled bool, certFile, keyFile string, port int) {
+func runFileServer(args []string, tlsEnabled bool, _, _ string, port int) {
 	dir := getDirectoryArg(args)
 
 	fmt.Println("🚀 Starting embedded file server...")
@@ -644,22 +642,4 @@ func getDirectoryArg(args []string) string {
 		return args[0]
 	}
 	return "."
-}
-
-// execCommand runs external commands (useful for delegating to other binaries)
-func execCommand(name string, args ...string) error {
-	cmd := exec.Command(name, args...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	cmd.Stdin = os.Stdin
-	return cmd.Run()
-}
-
-// replaceCurrentProcess replaces the current process (useful for delegation)
-func replaceCurrentProcess(name string, args ...string) error {
-	binary, err := exec.LookPath(name)
-	if err != nil {
-		return err
-	}
-	return syscall.Exec(binary, append([]string{name}, args...), os.Environ())
 }

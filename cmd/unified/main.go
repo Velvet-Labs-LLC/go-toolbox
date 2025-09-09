@@ -13,6 +13,12 @@ import (
 const (
 	appName    = "go-toolbox"
 	appVersion = "0.1.0"
+
+	modeTUI    = "tui"
+	modeUI     = "ui"
+	modeServe  = "serve"
+	modeServer = "server"
+	modeCLI    = "cli"
 )
 
 func main() {
@@ -20,11 +26,11 @@ func main() {
 	mode := detectMode()
 
 	switch mode {
-	case "tui", "ui":
+	case modeTUI, modeUI:
 		runTUIMode(os.Args[1:])
-	case "serve", "server":
+	case modeServe, modeServer:
 		runServerMode(os.Args[1:])
-	case "cli", "":
+	case modeCLI, "":
 		runCLIMode()
 	default:
 		runCLIMode() // Default to CLI mode
@@ -39,29 +45,23 @@ func detectMode() string {
 
 	// Handle common binary name patterns
 	switch {
-	case strings.HasSuffix(binaryName, "-tui") || binaryName == "toolbox-tui":
-		return "tui"
-	case strings.HasSuffix(binaryName, "-serve") || binaryName == "toolbox-serve":
-		return "serve"
-	case strings.HasSuffix(binaryName, "-cli") || binaryName == "toolbox-cli":
-		return "cli"
+	case strings.HasSuffix(binaryName, "-"+modeTUI) || binaryName == "toolbox-"+modeTUI:
+		return modeTUI
+	case strings.HasSuffix(binaryName, "-"+modeServe) || binaryName == "toolbox-"+modeServe:
+		return modeServe
+	case strings.HasSuffix(binaryName, "-"+modeCLI) || binaryName == "toolbox-"+modeCLI:
+		return modeCLI
 	}
 
 	// Check first argument
 	if len(os.Args) > 1 {
 		switch os.Args[1] {
-		case "tui", "ui":
-			// Remove the mode argument and pass the rest
-			os.Args = append([]string{os.Args[0]}, os.Args[2:]...)
-			return "tui"
-		case "serve", "server":
-			// Remove the mode argument and pass the rest
-			os.Args = append([]string{os.Args[0]}, os.Args[2:]...)
-			return "serve"
-		case "cli":
-			// Remove the mode argument and pass the rest
-			os.Args = append([]string{os.Args[0]}, os.Args[2:]...)
-			return "cli"
+		case modeTUI, modeUI:
+			return modeTUI
+		case modeServe, modeServer:
+			return modeServe
+		case modeCLI:
+			return modeCLI
 		}
 	}
 
@@ -112,10 +112,10 @@ You can also create symlinks for convenience:
 // createTUICommand creates the TUI subcommand
 func createTUICommand() *cobra.Command {
 	return &cobra.Command{
-		Use:   "tui",
+		Use:   modeTUI,
 		Short: "Start the Terminal User Interface",
 		Long:  "Launch the interactive terminal user interface for the toolbox.",
-		Run: func(cmd *cobra.Command, args []string) {
+		Run: func(_ *cobra.Command, args []string) {
 			runTUIMode(args)
 		},
 	}
@@ -124,10 +124,10 @@ func createTUICommand() *cobra.Command {
 // createServeCommand creates the serve subcommand
 func createServeCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "serve",
+		Use:   modeServe,
 		Short: "Start the HTTP server",
 		Long:  "Start the HTTP server component of the toolbox.",
-		Run: func(cmd *cobra.Command, args []string) {
+		Run: func(_ *cobra.Command, args []string) {
 			runServerMode(args)
 		},
 	}
@@ -154,7 +154,7 @@ func createGenerateCommand() *cobra.Command {
 		Use:   "template [name]",
 		Short: "Generate a code template",
 		Args:  cobra.ExactArgs(1),
-		Run: func(cmd *cobra.Command, args []string) {
+		Run: func(_ *cobra.Command, args []string) {
 			fmt.Printf("Generating template: %s\n", args[0])
 			// TODO: Implement template generation
 		},
@@ -168,7 +168,7 @@ func createVersionCommand() *cobra.Command {
 	return &cobra.Command{
 		Use:   "version",
 		Short: "Show version information",
-		Run: func(cmd *cobra.Command, args []string) {
+		Run: func(_ *cobra.Command, _ []string) {
 			fmt.Printf("%s version %s\n", appName, appVersion)
 		},
 	}

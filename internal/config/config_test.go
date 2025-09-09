@@ -29,13 +29,6 @@ func TestDefaultConfigValues(t *testing.T) {
 	if cfg.CLI.Verbose != false {
 		t.Errorf("CLI.Verbose = %v, want %v", cfg.CLI.Verbose, false)
 	}
-	// Check Web defaults
-	if cfg.Web.Port != 8080 {
-		t.Errorf("Web.Port = %d, want %d", cfg.Web.Port, 8080)
-	}
-	if cfg.Web.Host != "localhost" {
-		t.Errorf("Web.Host = %q, want %q", cfg.Web.Host, "localhost")
-	}
 }
 
 func TestGetConfigDirCreatesDirectory(t *testing.T) {

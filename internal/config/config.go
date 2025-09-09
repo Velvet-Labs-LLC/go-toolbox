@@ -20,7 +20,6 @@ type Config struct {
 	// Application-specific settings
 	CLI CLIConfig `mapstructure:"cli"`
 	TUI TUIConfig `mapstructure:"tui"`
-	Web WebConfig `mapstructure:"web"`
 }
 
 // CLIConfig holds CLI-specific configuration
@@ -34,14 +33,6 @@ type CLIConfig struct {
 type TUIConfig struct {
 	Theme       string `mapstructure:"theme"`
 	MouseEvents bool   `mapstructure:"mouse_events"`
-}
-
-// WebConfig holds web-specific configuration
-type WebConfig struct {
-	Port    int    `mapstructure:"port"`
-	Host    string `mapstructure:"host"`
-	TLSCert string `mapstructure:"tls_cert"`
-	TLSKey  string `mapstructure:"tls_key"`
 }
 
 var globalConfig *Config
@@ -97,12 +88,6 @@ func setDefaults() {
 	// TUI defaults
 	viper.SetDefault("tui.theme", "default")
 	viper.SetDefault("tui.mouse_events", true)
-
-	// Web defaults
-	viper.SetDefault("web.port", 8080)
-	viper.SetDefault("web.host", "localhost")
-	viper.SetDefault("web.tls_cert", "")
-	viper.SetDefault("web.tls_key", "")
 }
 
 // Get returns the global configuration

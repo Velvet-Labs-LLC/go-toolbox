@@ -7,12 +7,41 @@ This guide covers development practices and patterns used in the Go Toolbox proj
 ### Directory Structure
 
 - `cmd/`: Main applications (executable entry points)
+  - `cli/`: Individual CLI tools
+  - `tui/`: Individual TUI applications  
+  - `unified/`: Alternative unified binary
+  - `embedded/`: **Recommended unified binary** (maximum code reuse)
 - `internal/`: Private application code (cannot be imported by other projects)
 - `pkg/`: Public library code (can be imported by other projects)
 - `configs/`: Configuration files
 - `scripts/`: Build and deployment scripts
 - `test/`: Additional test files and utilities
 - `docs/`: Documentation
+
+### Binary Strategy
+
+The project supports multiple binary packaging strategies:
+
+#### 1. Embedded Binary (Recommended) 🎯
+- **Location**: `cmd/embedded/main.go`
+- **Binary**: `bin/embedded`
+- **Benefits**: Maximum code reuse, smallest size, easiest maintenance
+- **Usage**: 
+  ```bash
+  ./bin/embedded --help     # CLI mode (default)
+  ./bin/embedded tui        # TUI mode
+  ./bin/embedded serve ./   # Server mode
+  ```
+
+#### 2. Individual Binaries
+- **Binaries**: `bin/cli-main`, `bin/tui-main`, `bin/cli-serve`
+- **Benefits**: Component isolation, debugging ease
+- **Usage**: Development and testing
+
+#### 3. Unified Binary (Alternative)
+- **Location**: `cmd/unified/main.go`  
+- **Binary**: `bin/cmd-unified`
+- **Benefits**: Alternative implementation approach
 
 ### Dependency Management
 

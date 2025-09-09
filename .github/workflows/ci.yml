@@ -289,7 +289,7 @@ jobs:
               fi
             fi
           done
-          
+
           # Test CLI binaries
           echo "Testing CLI binaries..."
           for binary in bin/cli/*linux-amd64*; do

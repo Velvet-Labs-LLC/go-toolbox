@@ -2,52 +2,110 @@
 
 ## Overview
 
-This document outlines different approaches to package all CLI and TUI tools into a single binary, providing users with multiple deployment options.
+This document outlines different approaches to package all CLI and TUI tools into a single binary, providing users with multiple deployment options. We've implemented multiple strategies to give maximum flexibility.
 
-## 🎯 Approach 1: Unified Binary (Implemented)
+## 🎯 Approach 1: Embedded Binary (Recommended) ✨
 
-**Location**: `cmd/unified/main.go`
+**Location**: `cmd/embedded/main.go`
 
 ### **How It Works**
-- Single binary that detects execution mode
+- Single binary that maximally reuses existing code from CLI and TUI components
+- Detects execution mode based on binary name or first argument
 - Supports subcommands and symlink detection
-- All functionality in one executable
+- All functionality embedded in one optimized executable
 
 ### **Usage Examples**
 ```bash
-# Default CLI mode
-./go-toolbox --help
+# Default CLI mode with all subcommands
+./embedded --help
+./embedded file hash README.md
+./embedded network ping google.com
+./embedded utils string reverse "hello world"
 
-# Explicit mode selection
-./go-toolbox tui
-./go-toolbox serve --addr :9090
-./go-toolbox generate template myapp
+# TUI mode - interactive terminal interface
+./embedded tui
 
-# Symlink support
-ln -s go-toolbox toolbox-tui
+# Server mode - HTTP file server
+./embedded serve ./docs --port 8080 --tls
+
+# Symlink support for convenience
+ln -s embedded toolbox-tui
 ./toolbox-tui  # Automatically runs in TUI mode
 
-ln -s go-toolbox toolbox-serve  
-./toolbox-serve --addr :8080  # Automatically runs server
+ln -s embedded toolbox-serve  
+./toolbox-serve ./docs --port 8080  # Automatically runs server
 ```
 
 ### **Architecture**
 ```go
 main()
-├── detectMode() // Binary name or first argument
-├── runCLIMode() // Default Cobra CLI with subcommands
-├── runTUIMode() // TUI application
-└── runServerMode() // HTTP server
+├── detectMode() // Binary name or first argument detection
+├── runCLIMode() // Full CLI with reused command implementations
+├── runTUIMode() // TUI with reused existing TUI models  
+└── runServerMode() // HTTP server with reused server logic
+```
+
+### **Code Reuse Benefits**
+- ✅ **Maximum Reuse**: All CLI command functions directly reused from `cmd/cli/main/main.go`
+- ✅ **TUI Integration**: Reuses existing TUI models and generator components
+- ✅ **Shared Logic**: Configuration, logging, and utilities shared across modes
+- ✅ **Maintainability**: Updates to base components automatically benefit embedded version
+
+## 🔄 Approach 2: Unified Binary (Alternative)
+
+**Location**: `cmd/unified/main.go`
+
+### **How It Works**
+- Single binary that detects execution mode
+- Supports subcommands and symlink detection  
+- Alternative implementation approach
+
+### **Usage Examples**
+```bash
+# Default CLI mode
+./cmd-unified --help
+
+# Explicit mode selection
+./cmd-unified tui
+./cmd-unified serve --addr :9090
+./cmd-unified generate template myapp
+
+# Symlink support
+ln -s cmd-unified toolbox-tui
+./toolbox-tui  # Automatically runs in TUI mode
 ```
 
 ### **Benefits**
 - ✅ **Single download**: Users get everything in one file
 - ✅ **Symlink support**: Create tool-specific shortcuts  
 - ✅ **Backward compatible**: Same CLI interface
-- ✅ **Smaller total size**: Shared dependencies
-- ✅ **Easy deployment**: Just one binary to manage
+- ✅ **Alternative approach**: Different implementation strategy
 
-### **Current Release Structure**
+## 📊 Comparison: Embedded vs Unified vs Individual
+
+| Feature | Embedded | Unified | Individual |
+|---------|----------|---------|------------|
+| **Binary Count** | 1 | 1 | 4+ |
+| **Code Reuse** | Maximum | Moderate | Minimal |
+| **Maintenance** | Easiest | Moderate | Most complex |
+| **File Size** | Smallest | Medium | Largest total |
+| **Deployment** | Simplest | Simple | Complex |
+| **Mode Switching** | Fast | Fast | Process spawn |
+| **Memory Usage** | Most efficient | Efficient | Higher overhead |
+
+## 🎯 Recommendation
+
+**Use the Embedded Binary (`./bin/embedded`)** for:
+- ✅ **Production deployments**
+- ✅ **Container images** 
+- ✅ **End-user distribution**
+- ✅ **CI/CD pipelines**
+- ✅ **Maximum efficiency**
+
+**Use Individual Binaries** for:
+- 🔧 **Development and testing**
+- 🔧 **Debugging specific components**
+- 🔧 **Legacy compatibility**
 ```
 release/
 ├── unified/                           # Single all-in-one binary

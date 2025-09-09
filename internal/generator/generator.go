@@ -19,7 +19,6 @@ type ToolType int
 const (
 	CLI ToolType = iota
 	TUI
-	Web
 )
 
 func (t ToolType) String() string {
@@ -28,8 +27,6 @@ func (t ToolType) String() string {
 		return "CLI"
 	case TUI:
 		return "TUI"
-	case Web:
-		return "Web"
 	default:
 		return "Unknown"
 	}
@@ -91,7 +88,7 @@ var (
 func NewGeneratorModel() *GeneratorModel {
 	return &GeneratorModel{
 		step:    0,
-		choices: []string{"CLI Tool", "TUI Tool", "Web Tool", "Back to Main Menu"},
+		choices: []string{"CLI Tool", "TUI Tool", "Back to Main Menu"},
 		cursor:  0,
 	}
 }
@@ -219,8 +216,6 @@ func (m *GeneratorModel) handleSelection() (tea.Model, tea.Cmd) {
 		case 1:
 			m.toolType = TUI
 		case 2:
-			m.toolType = Web
-		case 3:
 			return m, tea.Quit // Back to main menu
 		}
 		m.step++
@@ -277,10 +272,6 @@ func (m *GeneratorModel) View() string {
 			s += generatorItemStyle.Render(fmt.Sprintf("Description: %s", m.toolDesc)) + "\n\n"
 			s += generatorItemStyle.Render("Files created:") + "\n"
 			s += generatorItemStyle.Render(fmt.Sprintf("  • cmd/%s/%s/main.go", strings.ToLower(m.toolType.String()), m.toolName)) + "\n"
-			if m.toolType == Web {
-				s += generatorItemStyle.Render(fmt.Sprintf("  • cmd/%s/%s/templates/", strings.ToLower(m.toolType.String()), m.toolName)) + "\n"
-				s += generatorItemStyle.Render(fmt.Sprintf("  • cmd/%s/%s/static/", strings.ToLower(m.toolType.String()), m.toolName)) + "\n"
-			}
 			s += generatorItemStyle.Render("  • README.md (updated)") + "\n"
 			s += generatorItemStyle.Render("  • Makefile (updated)") + "\n\n"
 			s += generatorHelpStyle.Render("Press 'r' to create another tool, 'b' to go back, or 'q' to quit")
@@ -316,10 +307,6 @@ func (m *GeneratorModel) generateTool() error {
 	switch m.toolType {
 	case CLI:
 		// CLI tools only need the main.go file, which is already generated
-	case Web:
-		if err := m.generateWebFiles(toolDir); err != nil {
-			return fmt.Errorf("failed to generate web files: %w", err)
-		}
 	case TUI:
 		if err := m.generateTUIFiles(toolDir); err != nil {
 			return fmt.Errorf("failed to generate TUI files: %w", err)
@@ -343,8 +330,6 @@ func (m *GeneratorModel) generateMainFile(toolDir string) error {
 		tmpl = cliTemplate
 	case TUI:
 		tmpl = tuiTemplate
-	case Web:
-		tmpl = webTemplate
 	}
 
 	t, err := template.New("main").Parse(tmpl)
@@ -370,32 +355,6 @@ func (m *GeneratorModel) generateMainFile(toolDir string) error {
 	defer file.Close()
 
 	return t.Execute(file, data)
-}
-
-// generateWebFiles creates additional files for web tools
-func (m *GeneratorModel) generateWebFiles(toolDir string) error {
-	// Create templates directory
-	templatesDir := filepath.Join(toolDir, "templates")
-	if err := os.MkdirAll(templatesDir, 0750); err != nil {
-		return err
-	}
-
-	// Create static directory
-	staticDir := filepath.Join(toolDir, "static")
-	if err := os.MkdirAll(staticDir, 0750); err != nil {
-		return err
-	}
-
-	// Create index template
-	// #nosec G304 - This creates files in a controlled directory structure
-	indexFile, err := os.Create(filepath.Join(templatesDir, "index.html"))
-	if err != nil {
-		return err
-	}
-	defer indexFile.Close()
-
-	_, err = indexFile.WriteString(htmlTemplate)
-	return err
 }
 
 // generateTUIFiles creates additional files for TUI tools

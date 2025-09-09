@@ -1,11 +1,11 @@
 # 🛠️ Tool Generator
 
-The Go Toolbox includes a powerful tool generator that allows you to quickly create new CLI, TUI, or Web applications with pre-configured templates and best practices.
+The Go Toolbox includes a powerful tool generator that allows you to quickly create new CLI and TUI applications with pre-configured templates and best practices.
 
 ## Features
 
 - **Interactive TUI Generator**: Navigate through an intuitive text-based interface
-- **Multiple Tool Types**: Generate CLI, TUI, or Web applications
+- **Multiple Tool Types**: Generate CLI and TUI applications
 - **Template-Based**: Uses industry-standard templates with proper structure
 - **VS Code Integration**: Quick-create tasks available in the command palette
 - **Automatic Build Integration**: Generated tools are automatically recognized by the Makefile
@@ -18,11 +18,13 @@ Run the TUI application and select "🛠️ Tool Generator":
 
 ```bash
 ./bin/tui-main
+# or using the embedded binary
+./bin/embedded tui
 ```
 
 Then follow the interactive prompts to:
 
-1. Select tool type (CLI, TUI, or Web)
+1. Select tool type (CLI or TUI)
 2. Enter tool name (lowercase, no spaces)
 3. Enter tool description
 4. Generate the tool with all necessary files
@@ -34,7 +36,6 @@ Use VS Code's Command Palette (`Ctrl+Shift+P`) and search for:
 - **🛠️ Generate CLI Tool**: Launch the TUI generator
 - **🚀 Quick New CLI Tool**: Create a CLI tool with prompts
 - **🖥️ Quick New TUI Tool**: Create a TUI tool with prompts
-- **🌐 Quick New Web Tool**: Create a Web tool with prompts
 
 ### 3. Manual Generation
 
@@ -49,6 +50,12 @@ cmd/cli/your-tool/
 └── main.go          # CLI application with flag parsing
 ```
 
+**Features**:
+- Cobra command-line framework integration
+- Flag parsing and validation
+- Help text generation
+- Integration with toolbox utilities
+
 ### TUI Tools
 
 ```(text)
@@ -56,14 +63,24 @@ cmd/tui/your-tool/
 └── main.go          # TUI application with Bubble Tea
 ```
 
-### Web Tools
+**Features**:
+- Bubble Tea framework integration
+- Interactive terminal interface
+- Keyboard navigation
+- Styled components using Lip Gloss
 
-```(text)
-cmd/web/your-tool/
-├── main.go          # Web server with HTTP handlers
-├── templates/       # HTML templates
-│   └── index.html
-└── static/          # Static assets (CSS, JS, images)
+## Build Integration
+
+Generated tools are automatically integrated into the build system:
+
+- CLI tools: `bin/cli-your-tool`
+- TUI tools: `bin/tui-your-tool`
+
+Build with:
+
+```bash
+make build        # Builds all tools including generated ones
+make build-all    # Cross-platform builds
 ```
 
 ## Tool Templates
@@ -90,14 +107,6 @@ All generated tools include:
 - Styled interface with Lipgloss
 - Proper cleanup and quit handling
 
-### Web Tool Features
-
-- HTTP server with routing
-- Template rendering system
-- Static file serving
-- API endpoints (/api/status)
-- Responsive HTML templates
-
 ## Building Generated Tools
 
 After generating a tool, build it using:
@@ -110,7 +119,6 @@ Your new tool will be available in the `bin/` directory as:
 
 - CLI tools: `bin/cli-your-tool`
 - TUI tools: `bin/tui-your-tool`
-- Web tools: `bin/web-your-tool`
 
 ## Development Workflow
 
@@ -127,6 +135,8 @@ Your new tool will be available in the `bin/` directory as:
 ```bash
 # Generate a file hash calculator
 ./bin/tui-main
+# or
+./bin/embedded tui
 # Select: CLI Tool -> "filehasher" -> "Calculate file hashes"
 
 # Use the generated tool
@@ -139,22 +149,12 @@ Your new tool will be available in the `bin/` directory as:
 ```bash
 # Generate a system monitor
 ./bin/tui-main
+# or
+./bin/embedded tui
 # Select: TUI Tool -> "sysmonitor" -> "Monitor system resources"
 
 # Use the generated tool
 ./bin/tui-sysmonitor
-```
-
-### Generated Web Tool Example
-
-```bash
-# Generate a JSON formatter
-./bin/tui-main
-# Select: Web Tool -> "jsonformat" -> "Format and validate JSON"
-
-# Use the generated tool
-./bin/web-jsonformat
-# Open: http://localhost:8080
 ```
 
 ## Customization
@@ -165,8 +165,6 @@ Edit the templates in `internal/generator/templates.go`:
 
 - `cliTemplate`: CLI application template
 - `tuiTemplate`: TUI application template
-- `webTemplate`: Web application template
-- `htmlTemplate`: Default HTML template for web tools
 
 ### Adding New Tool Types
 
@@ -189,7 +187,6 @@ To add new tool types:
 
 - CLI tools go in `cmd/cli/`
 - TUI tools go in `cmd/tui/`
-- Web tools go in `cmd/web/`
 - Shared code goes in `internal/` or `pkg/`
 
 ### Development Tips
@@ -212,11 +209,6 @@ To add new tool types:
 
 - Run `go mod tidy` to ensure dependencies are properly managed
 - Check that all imports are valid
-
-### Web tool won't start
-
-- Check that the port isn't already in use
-- Verify templates directory exists and has proper permissions
 
 ### Getting Help
 

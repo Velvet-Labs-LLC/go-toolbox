@@ -11,7 +11,7 @@ A comprehensive collection of CLI, TUI, and utility tools written in Go with mod
 
 ## Overview
 
-This project serves as a modern Go toolbox containing various utilities and applications built with Go 1.24+. It demonstrates enterprise-level CI/CD practices, comprehensive testing, security scanning, and cross-platform builds.
+This project serves as a modern Go toolbox containing various utilities and applications built with Go 1.24+. It demonstrates enterprise-level CI/CD practices, comprehensive testing, security scanning, and cross-platform builds. The toolbox provides both individual tool binaries and a unified embedded binary for maximum flexibility.
 
 ## 🚀 Quick Start
 
@@ -26,11 +26,15 @@ go mod download
 # Build all tools
 make build
 
-# Run the main CLI tool
-./bin/cli-main --help
+# Option 1: Use the unified embedded binary (recommended)
+./bin/embedded --help              # CLI mode (default)
+./bin/embedded tui                 # TUI mode  
+./bin/embedded serve ./docs        # Server mode
 
-# Start a file server (great for local network sharing)
-./bin/cli-serve --dir ./docs --port 8080
+# Option 2: Use individual tool binaries
+./bin/cli-main --help              # Main CLI tool
+./bin/tui-main                     # TUI application
+./bin/cli-serve ./docs --port 8080 # File server
 ```
 
 ## 📊 Project Status
@@ -46,34 +50,77 @@ make build
 
 ## 🛠️ Available Tools
 
-### CLI Tools
+### 🎯 Embedded Binary (Recommended)
+- **`embedded`** - Unified binary combining all tools into one executable
+  - **CLI Mode**: Default mode with all CLI functionality
+  - **TUI Mode**: Interactive terminal user interface (`embedded tui`)
+  - **Server Mode**: HTTP file server (`embedded serve [directory]`)
+
+### 📦 Individual Binaries
 - **`cli-main`** - Main CLI application with multiple utilities and sub-commands
 - **`cli-serve`** - HTTP file server for local network sharing ([docs](./cmd/cli/serve/README.md))
-
-### TUI Tools  
 - **`tui-main`** - Interactive terminal application with tool generation capabilities
+- **`cmd-unified`** - Alternative unified binary implementation
+
+### ⚡ Tool Categories
+
+#### File Operations
+- File hash calculation (MD5, SHA256)
+- File information and metadata
+- File permission management
+
+#### Network Utilities  
+- Host ping functionality
+- Port scanning
+- HTTP file server with TLS support
+
+#### System Information
+- System details and specifications
+- Process listing and monitoring
+- Resource usage tracking
+
+#### Development Tools
+- Code template generation
+- String manipulation utilities
+- Random data generation
+- Configuration management
 
 ## 🏗️ Architecture
 
 ```
 go-toolbox/
-├── cmd/                    # Applications (builds to bin/)
-│   ├── cli/               # Command-line tools
-│   │   ├── main/          # → cli-main binary
-│   │   └── serve/         # → cli-serve binary  
-│   └── tui/               # Terminal UI applications
-│       └── main/          # → tui-main binary
-├── internal/              # Private application code
-│   ├── cli/               # CLI framework and utilities
-│   ├── config/            # Configuration management (Viper)
-│   ├── generator/         # Code/tool generation utilities
-│   └── logger/            # Structured logging (slog)
-├── pkg/                   # Public library code
-│   └── utils/             # General utilities (crypto-secure)
-├── examples/              # Usage examples
-├── docs/                  # Documentation
-└── scripts/               # Build and development scripts
+├── cmd/                       # Applications (builds to bin/)
+│   ├── cli/                   # Command-line tools
+│   │   ├── main/              # → cli-main binary
+│   │   └── serve/             # → cli-serve binary  
+│   ├── tui/                   # Terminal UI applications
+│   │   └── main/              # → tui-main binary
+│   ├── unified/               # → cmd-unified binary (alternative)
+│   └── embedded/              # → embedded binary (recommended)
+├── internal/                  # Private application code
+│   ├── cli/                   # CLI framework and utilities
+│   ├── config/                # Configuration management (Viper)
+│   ├── generator/             # Code/tool generation utilities
+│   └── logger/                # Structured logging (slog)
+├── pkg/                       # Public library code
+│   └── utils/                 # General utilities (crypto-secure)
+├── examples/                  # Usage examples
+├── docs/                      # Documentation
+└── scripts/                   # Build and development scripts
 ```
+
+### Binary Types
+
+1. **🎯 Embedded Binary** (`./bin/embedded`): Single binary with all functionality
+   - Automatic mode detection (CLI/TUI/Server)
+   - Symlink support for mode shortcuts
+   - Maximum code reuse and efficiency
+
+2. **📦 Individual Binaries**: Separate executables for each tool
+   - `cli-main`: Full CLI functionality
+   - `tui-main`: Terminal user interface
+   - `cli-serve`: Dedicated file server
+   - `cmd-unified`: Alternative unified implementation
 
 ## 🔧 Development
 

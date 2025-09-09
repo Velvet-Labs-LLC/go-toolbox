@@ -11,7 +11,6 @@ func TestToolTypeString(t *testing.T) {
 	}{
 		{CLI, "CLI"},
 		{TUI, "TUI"},
-		{Web, "Web"},
 		{ToolType(42), "Unknown"},
 	}
 	for _, tt := range tests {
@@ -26,7 +25,7 @@ func TestNewGeneratorModel(t *testing.T) {
 	if m.step != 0 {
 		t.Errorf("initial step = %d, want 0", m.step)
 	}
-	wantChoices := []string{"CLI Tool", "TUI Tool", "Web Tool", "Back to Main Menu"}
+	wantChoices := []string{"CLI Tool", "TUI Tool", "Back to Main Menu"}
 	if len(m.choices) != len(wantChoices) {
 		t.Fatalf("choices length = %d, want %d", len(m.choices), len(wantChoices))
 	}

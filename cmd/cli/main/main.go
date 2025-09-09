@@ -5,10 +5,11 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/spf13/cobra"
+
 	"github.com/nate3d/toolbox/internal/cli"
 	"github.com/nate3d/toolbox/internal/config"
 	"github.com/nate3d/toolbox/internal/logger"
-	"github.com/spf13/cobra"
 )
 
 const (

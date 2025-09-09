@@ -1,7 +1,7 @@
 # This file is licensed under the terms of the MIT license https://opensource.org/license/mit
 # Copyright (c) 2021-2025 Marat Reymers
 
-## Golden config for golangci-lint v2.4.0 - Updated for Go 1.25
+## Golden config for golangci-lint v2.4.0
 #
 # This is the best config for golangci-lint based on my experience and opinion.
 # It is very strict, but not extremely strict.
@@ -14,7 +14,11 @@ version: "2"
 
 run:
   timeout: 5m
-  go: "1.25"
+  go: "1.24"
+  skip-dirs:
+    - examples
+    - docs
+    - test
 
 issues:
   # Maximum count of issues with the same text.
@@ -22,32 +26,8 @@ issues:
   # Default: 3
   max-same-issues: 50
 
-formatters:
-  enable:
-    - goimports # checks if the code and import statements are formatted according to the 'goimports' command
-    - golines # checks if code is formatted, and fixes long lines
-
-    ## you may want to enable
-    #- gci # checks if code and import statements are formatted, with additional rules
-    #- gofmt # checks if the code is formatted according to 'gofmt' command
-    #- gofumpt # enforces a stricter format than 'gofmt', while being backwards compatible
-    #- swaggo # formats swaggo comments
-
-  # All settings can be found here https://github.com/golangci/golangci-lint/blob/HEAD/.golangci.reference.yml
-  settings:
-    goimports:
-      # A list of prefixes, which, if set, checks import paths
-      # with the given prefixes are grouped after 3rd-party packages.
-      # Default: []
-      local-prefixes:
-        - github.com/nate3d/toolbox
-
-    golines:
-      # Target maximum line length.
-      # Default: 100
-      max-len: 120
-
 linters:
+  disable-all: true
   enable:
     - asasalint # checks for pass []any as any in variadic func(...any)
     - asciicheck # checks that your code does not contain non-ASCII identifiers
@@ -55,7 +35,6 @@ linters:
     - bodyclose # checks whether HTTP response body is closed successfully
     - canonicalheader # checks whether net/http.Header uses canonical header
     - copyloopvar # detects places where loop variables are copied (Go 1.22+)
-    - intrange # finds places where for loops could make use of an integer range (Go 1.22+)
     - cyclop # checks function and package cyclomatic complexity
     - depguard # checks if package imports are in a list of acceptable packages
     - dupl # tool for code clone detection

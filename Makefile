@@ -89,6 +89,11 @@ lint:
 fmt:
 	@echo "$(GREEN)Formatting code...$(NC)"
 	@go fmt ./...
+	@if command -v goimports >/dev/null 2>&1; then \
+		goimports -w -local github.com/nate3d/toolbox .; \
+	else \
+		echo "$(YELLOW)goimports not found, install with: go install golang.org/x/tools/cmd/goimports@latest$(NC)"; \
+	fi
 
 ## vet: Run go vet
 vet:

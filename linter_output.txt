@@ -1,0 +1,547 @@
+[0;32mRunning linters...[0m 
+cmd/cli/serve/main.go:1:1: the average complexity for the package main is 10.333333, max is 10.000000 (cyclop)
+package main
+^
+internal/cli/cli.go:166:18: Error return value of `t.writer.Append` is not checked (errcheck)
+		t.writer.Append(toInterfaceSlice(row)...)
+		               ^
+internal/cli/cli.go:170:17: Error return value of `t.writer.Render` is not checked (errcheck)
+	t.writer.Render()
+	               ^
+internal/cli/cli.go:207:11: Error return value of `p.bar.Add` is not checked (errcheck)
+	p.bar.Add(num)
+	         ^
+internal/cli/cli.go:212:14: Error return value of `p.bar.Finish` is not checked (errcheck)
+	p.bar.Finish()
+	            ^
+examples/basic/main.go:12:2: use of `fmt.Println` forbidden by pattern `^(fmt\.Print(|f|ln)|print|println)$` (forbidigo)
+	fmt.Println("Go Toolbox Examples")
+	^
+examples/basic/main.go:13:2: use of `fmt.Println` forbidden by pattern `^(fmt\.Print(|f|ln)|print|println)$` (forbidigo)
+	fmt.Println("===================")
+	^
+examples/basic/main.go:16:2: use of `fmt.Println` forbidden by pattern `^(fmt\.Print(|f|ln)|print|println)$` (forbidigo)
+	fmt.Println("\n1. String Utilities:")
+	^
+examples/basic/main.go:20:2: use of `fmt.Printf` forbidden by pattern `^(fmt\.Print(|f|ln)|print|println)$` (forbidigo)
+	fmt.Printf("Original: %s\n", text)
+	^
+examples/basic/main.go:21:2: use of `fmt.Printf` forbidden by pattern `^(fmt\.Print(|f|ln)|print|println)$` (forbidigo)
+	fmt.Printf("Reversed: %s\n", str.Reverse(text))
+	^
+examples/basic/main.go:22:2: use of `fmt.Printf` forbidden by pattern `^(fmt\.Print(|f|ln)|print|println)$` (forbidigo)
+	fmt.Printf("CamelCase: %s\n", str.ToCamelCase(text))
+	^
+examples/basic/main.go:23:2: use of `fmt.Printf` forbidden by pattern `^(fmt\.Print(|f|ln)|print|println)$` (forbidigo)
+	fmt.Printf("SnakeCase: %s\n", str.ToSnakeCase("HelloWorld"))
+	^
+examples/basic/main.go:24:2: use of `fmt.Printf` forbidden by pattern `^(fmt\.Print(|f|ln)|print|println)$` (forbidigo)
+	fmt.Printf("KebabCase: %s\n", str.ToKebabCase("HelloWorld"))
+	^
+examples/basic/main.go:27:2: use of `fmt.Println` forbidden by pattern `^(fmt\.Print(|f|ln)|print|println)$` (forbidigo)
+	fmt.Println("\n2. Slice Utilities:")
+	^
+examples/basic/main.go:31:2: use of `fmt.Printf` forbidden by pattern `^(fmt\.Print(|f|ln)|print|println)$` (forbidigo)
+	fmt.Printf("Original: %v\n", fruits)
+	^
+examples/basic/main.go:32:2: use of `fmt.Printf` forbidden by pattern `^(fmt\.Print(|f|ln)|print|println)$` (forbidigo)
+	fmt.Printf("Unique: %v\n", slice.Unique(fruits))
+	^
+examples/basic/main.go:33:2: use of `fmt.Printf` forbidden by pattern `^(fmt\.Print(|f|ln)|print|println)$` (forbidigo)
+	fmt.Printf("Contains 'apple': %v\n", slice.Contains(fruits, "apple"))
+	^
+examples/basic/main.go:34:2: use of `fmt.Printf` forbidden by pattern `^(fmt\.Print(|f|ln)|print|println)$` (forbidigo)
+	fmt.Printf("Sorted: %v\n", slice.Sort(fruits))
+	^
+examples/basic/main.go:40:2: use of `fmt.Printf` forbidden by pattern `^(fmt\.Print(|f|ln)|print|println)$` (forbidigo)
+	fmt.Printf("Long fruits (>5 chars): %v\n", longFruits)
+	^
+examples/basic/main.go:43:2: use of `fmt.Println` forbidden by pattern `^(fmt\.Print(|f|ln)|print|println)$` (forbidigo)
+	fmt.Println("\n3. Random Utilities:")
+	^
+examples/basic/main.go:46:2: use of `fmt.Printf` forbidden by pattern `^(fmt\.Print(|f|ln)|print|println)$` (forbidigo)
+	fmt.Printf("Random string (10 chars): %s\n", random.String(10))
+	^
+examples/basic/main.go:47:2: use of `fmt.Printf` forbidden by pattern `^(fmt\.Print(|f|ln)|print|println)$` (forbidigo)
+	fmt.Printf("Random int (1-100): %d\n", random.Int(1, 100))
+	^
+examples/basic/main.go:48:2: use of `fmt.Printf` forbidden by pattern `^(fmt\.Print(|f|ln)|print|println)$` (forbidigo)
+	fmt.Printf("Random bool: %v\n", random.Bool())
+	^
+examples/basic/main.go:49:2: use of `fmt.Printf` forbidden by pattern `^(fmt\.Print(|f|ln)|print|println)$` (forbidigo)
+	fmt.Printf("Random choice from fruits: %s\n", random.Choice([]string{"apple", "banana", "cherry"}))
+	^
+examples/basic/main.go:52:2: use of `fmt.Println` forbidden by pattern `^(fmt\.Print(|f|ln)|print|println)$` (forbidigo)
+	fmt.Println("\n4. Hash Utilities:")
+	^
+examples/basic/main.go:56:2: use of `fmt.Printf` forbidden by pattern `^(fmt\.Print(|f|ln)|print|println)$` (forbidigo)
+	fmt.Printf("Text: %s\n", data)
+	^
+examples/basic/main.go:57:2: use of `fmt.Printf` forbidden by pattern `^(fmt\.Print(|f|ln)|print|println)$` (forbidigo)
+	fmt.Printf("MD5: %s\n", hash.MD5(data))
+	^
+examples/basic/main.go:58:2: use of `fmt.Printf` forbidden by pattern `^(fmt\.Print(|f|ln)|print|println)$` (forbidigo)
+	fmt.Printf("SHA256: %s\n", hash.SHA256(data))
+	^
+examples/basic/main.go:61:2: use of `fmt.Println` forbidden by pattern `^(fmt\.Print(|f|ln)|print|println)$` (forbidigo)
+	fmt.Println("\n5. Validation Utilities:")
+	^
+examples/basic/main.go:66:3: use of `fmt.Printf` forbidden by pattern `^(fmt\.Print(|f|ln)|print|println)$` (forbidigo)
+		fmt.Printf("Email '%s' is valid: %v\n", email, validate.Email(email))
+		^
+examples/basic/main.go:71:3: use of `fmt.Printf` forbidden by pattern `^(fmt\.Print(|f|ln)|print|println)$` (forbidigo)
+		fmt.Printf("IP '%s' is valid: %v\n", ip, validate.IP(ip))
+		^
+examples/basic/main.go:75:2: use of `fmt.Println` forbidden by pattern `^(fmt\.Print(|f|ln)|print|println)$` (forbidigo)
+	fmt.Println("\n6. File Utilities:")
+	^
+examples/basic/main.go:81:3: use of `fmt.Printf` forbidden by pattern `^(fmt\.Print(|f|ln)|print|println)$` (forbidigo)
+		fmt.Printf("File '%s' exists: %v\n", filename, file.Exists(filename))
+		^
+examples/basic/main.go:87:4: use of `fmt.Printf` forbidden by pattern `^(fmt\.Print(|f|ln)|print|println)$` (forbidigo)
+			fmt.Printf("go.mod size: %d bytes\n", size)
+			^
+examples/basic/main.go:92:2: use of `fmt.Println` forbidden by pattern `^(fmt\.Print(|f|ln)|print|println)$` (forbidigo)
+	fmt.Println("\n7. Conversion Utilities:")
+	^
+examples/basic/main.go:97:3: use of `fmt.Printf` forbidden by pattern `^(fmt\.Print(|f|ln)|print|println)$` (forbidigo)
+		fmt.Printf("String '42' to int: %d\n", num)
+		^
+examples/basic/main.go:101:3: use of `fmt.Printf` forbidden by pattern `^(fmt\.Print(|f|ln)|print|println)$` (forbidigo)
+		fmt.Printf("String '3.14' to float: %.2f\n", f)
+		^
+examples/basic/main.go:105:3: use of `fmt.Printf` forbidden by pattern `^(fmt\.Print(|f|ln)|print|println)$` (forbidigo)
+		fmt.Printf("String 'true' to bool: %v\n", b)
+		^
+examples/basic/main.go:109:2: use of `fmt.Printf` forbidden by pattern `^(fmt\.Print(|f|ln)|print|println)$` (forbidigo)
+	fmt.Printf("Int 42 to string: '%s'\n", convert.IntToString(42))
+	^
+examples/basic/main.go:110:2: use of `fmt.Printf` forbidden by pattern `^(fmt\.Print(|f|ln)|print|println)$` (forbidigo)
+	fmt.Printf("Float 3.14 to string: '%s'\n", convert.FloatToString(3.14))
+	^
+examples/basic/main.go:111:2: use of `fmt.Printf` forbidden by pattern `^(fmt\.Print(|f|ln)|print|println)$` (forbidigo)
+	fmt.Printf("Bool true to string: '%s'\n", convert.BoolToString(true))
+	^
+examples/basic/main.go:113:2: use of `fmt.Println` forbidden by pattern `^(fmt\.Print(|f|ln)|print|println)$` (forbidigo)
+	fmt.Println("\nExample completed successfully!")
+	^
+examples/basic/main.go:120:2: use of `fmt.Println` forbidden by pattern `^(fmt\.Print(|f|ln)|print|println)$` (forbidigo)
+	fmt.Println("\nConcurrency Example:")
+	^
+examples/basic/main.go:136:4: use of `fmt.Printf` forbidden by pattern `^(fmt\.Print(|f|ln)|print|println)$` (forbidigo)
+			fmt.Printf("URL: %s, Hash: %s\n", u, urlHash)
+			^
+examples/basic/main.go:143:2: use of `fmt.Println` forbidden by pattern `^(fmt\.Print(|f|ln)|print|println)$` (forbidigo)
+	fmt.Println("\nChaining Example:")
+	^
+examples/basic/main.go:160:2: use of `fmt.Printf` forbidden by pattern `^(fmt\.Print(|f|ln)|print|println)$` (forbidigo)
+	fmt.Printf("Original: %v\n", names)
+	^
+examples/basic/main.go:161:2: use of `fmt.Printf` forbidden by pattern `^(fmt\.Print(|f|ln)|print|println)$` (forbidigo)
+	fmt.Printf("Processed: %v\n", processed)
+	^
+examples/basic/main.go:166:2: use of `fmt.Println` forbidden by pattern `^(fmt\.Print(|f|ln)|print|println)$` (forbidigo)
+	fmt.Println("\nError Handling Example:")
+	^
+examples/basic/main.go:176:4: use of `fmt.Printf` forbidden by pattern `^(fmt\.Print(|f|ln)|print|println)$` (forbidigo)
+			fmt.Printf("Failed to convert '%s' to int: %v\n", input, err)
+			^
+examples/basic/main.go:178:4: use of `fmt.Printf` forbidden by pattern `^(fmt\.Print(|f|ln)|print|println)$` (forbidigo)
+			fmt.Printf("Converted '%s' to int: %d\n", input, num)
+			^
+examples/basic/main.go:187:4: use of `fmt.Printf` forbidden by pattern `^(fmt\.Print(|f|ln)|print|println)$` (forbidigo)
+			fmt.Printf("✓ Valid email: %s\n", email)
+			^
+examples/basic/main.go:189:4: use of `fmt.Printf` forbidden by pattern `^(fmt\.Print(|f|ln)|print|println)$` (forbidigo)
+			fmt.Printf("✗ Invalid email: %s\n", email)
+			^
+internal/cli/cli.go:87:3: use of `fmt.Printf` forbidden by pattern `^(fmt\.Print(|f|ln)|print|println)$` (forbidigo)
+		fmt.Printf(format+"\n", args...)
+		^
+internal/cli/cli.go:96:3: use of `fmt.Printf` forbidden by pattern `^(fmt\.Print(|f|ln)|print|println)$` (forbidigo)
+		fmt.Printf(format+"\n", args...)
+		^
+internal/cli/cli.go:105:3: use of `fmt.Printf` forbidden by pattern `^(fmt\.Print(|f|ln)|print|println)$` (forbidigo)
+		fmt.Printf(format+"\n", args...)
+		^
+examples/basic/main.go:11:6: Function 'main' has too many statements (59 > 50) (funlen)
+func main() {
+     ^
+cmd/tui/main/main.go:32:2: titleStyle is a global variable (gochecknoglobals)
+	titleStyle = lipgloss.NewStyle().
+	^
+cmd/tui/main/main.go:38:2: itemStyle is a global variable (gochecknoglobals)
+	itemStyle = lipgloss.NewStyle().
+	^
+cmd/tui/main/main.go:41:2: selectedItemStyle is a global variable (gochecknoglobals)
+	selectedItemStyle = lipgloss.NewStyle().
+	^
+cmd/tui/main/main.go:45:2: helpStyle is a global variable (gochecknoglobals)
+	helpStyle = lipgloss.NewStyle().
+	^
+cmd/tui/main/main.go:50:2: quitTextStyle is a global variable (gochecknoglobals)
+	quitTextStyle = lipgloss.NewStyle().
+	^
+internal/cli/cli.go:49:2: InfoColor is a global variable (gochecknoglobals)
+	InfoColor    = color.New(color.FgCyan)
+	^
+internal/cli/cli.go:50:2: SuccessColor is a global variable (gochecknoglobals)
+	SuccessColor = color.New(color.FgGreen)
+	^
+internal/cli/cli.go:51:2: WarnColor is a global variable (gochecknoglobals)
+	WarnColor    = color.New(color.FgYellow)
+	^
+internal/cli/cli.go:52:2: ErrorColor is a global variable (gochecknoglobals)
+	ErrorColor   = color.New(color.FgRed)
+	^
+internal/cli/cli.go:53:2: HeaderColor is a global variable (gochecknoglobals)
+	HeaderColor  = color.New(color.FgBlue, color.Bold)
+	^
+internal/config/config.go:47:5: globalConfig is a global variable (gochecknoglobals)
+var globalConfig *Config
+    ^
+internal/logger/logger.go:42:5: globalLogger is a global variable (gochecknoglobals)
+var globalLogger *Logger
+    ^
+examples/basic/main.go:195:1: don't use `init` function (gochecknoinits)
+func init() {
+^
+cmd/cli/serve/main.go:19:1: cognitive complexity 26 of func `main` is high (> 20) (gocognit)
+func main() {
+^
+cmd/tui/main/main.go:182:8: string `ctrl+c` has 6 occurrences, but such constant `keyCtrlC` already exists (goconst)
+		case "ctrl+c", "q":
+		     ^
+cmd/tui/main/main.go:85:2: singleCaseSwitch: should rewrite switch statement to if statement (gocritic)
+	switch msg := msg.(type) {
+	^
+cmd/tui/main/main.go:179:2: singleCaseSwitch: should rewrite switch statement to if statement (gocritic)
+	switch msg := msg.(type) {
+	^
+cmd/tui/main/main.go:215:2: singleCaseSwitch: should rewrite switch statement to if statement (gocritic)
+	switch msg := msg.(type) {
+	^
+cmd/tui/main/main.go:251:2: singleCaseSwitch: should rewrite switch statement to if statement (gocritic)
+	switch msg := msg.(type) {
+	^
+cmd/tui/main/main.go:288:2: singleCaseSwitch: should rewrite switch statement to if statement (gocritic)
+	switch msg := msg.(type) {
+	^
+cmd/tui/main/main.go:324:2: singleCaseSwitch: should rewrite switch statement to if statement (gocritic)
+	switch msg := msg.(type) {
+	^
+cmd/tui/main/main.go:360:2: singleCaseSwitch: should rewrite switch statement to if statement (gocritic)
+	switch msg := msg.(type) {
+	^
+cmd/tui/main/main.go:17:1: Comment should end in a period (godot)
+// Constants for UI styling
+^
+cmd/tui/main/main.go:19:2: Comment should end in a period (godot)
+	// Padding values
+	^
+cmd/tui/main/main.go:23:2: Comment should end in a period (godot)
+	// Key bindings
+	^
+cmd/tui/main/main.go:54:1: Comment should end in a period (godot)
+// Model represents the application state
+^
+cmd/tui/main/main.go:62:1: Comment should end in a period (godot)
+// initialModel creates the initial model
+^
+cmd/tui/main/main.go:78:1: Comment should end in a period (godot)
+// Init implements tea.Model
+^
+cmd/tui/main/main.go:83:1: Comment should end in a period (godot)
+// Update implements tea.Model
+^
+cmd/tui/main/main.go:116:1: Comment should end in a period (godot)
+// View implements tea.Model
+^
+cmd/tui/main/main.go:148:1: Comment should end in a period (godot)
+// handleMenuSelection handles menu item selection
+^
+cmd/tui/main/main.go:167:1: Comment should end in a period (godot)
+// File Operations Model
+^
+cmd/tui/main/main.go:203:1: Comment should end in a period (godot)
+// Network Tools Model
+^
+cmd/tui/main/main.go:239:1: Comment should end in a period (godot)
+// System Information Model
+^
+cmd/tui/main/main.go:276:1: Comment should end in a period (godot)
+// String Utilities Model
+^
+cmd/tui/main/main.go:312:1: Comment should end in a period (godot)
+// Random Generator Model
+^
+cmd/tui/main/main.go:348:1: Comment should end in a period (godot)
+// Configuration Model
+^
+examples/basic/main.go:10:1: Comment should end in a period (godot)
+// Example demonstrates basic usage of the toolbox utilities
+^
+examples/basic/main.go:118:1: Comment should end in a period (godot)
+// ExampleConcurrency demonstrates how you might use these utilities in a concurrent context
+^
+examples/basic/main.go:141:1: Comment should end in a period (godot)
+// ExampleChaining demonstrates chaining utility operations
+^
+examples/basic/main.go:164:1: Comment should end in a period (godot)
+// ExampleErrorHandling demonstrates proper error handling with utilities
+^
+examples/basic/main.go:194:1: Comment should end in a period (godot)
+// init function runs before main
+^
+pkg/utils/utils.go:20:2: Comment should end in a period (godot)
+	// String truncation constants
+	^
+pkg/utils/utils.go:24:1: Comment should end in a period (godot)
+// StringUtils provides string manipulation utilities
+^
+pkg/utils/utils.go:27:1: Comment should end in a period (godot)
+// String returns a new StringUtils instance
+^
+pkg/utils/utils.go:32:1: Comment should end in a period (godot)
+// IsEmpty checks if a string is empty or contains only whitespace
+^
+pkg/utils/utils.go:37:1: Comment should end in a period (godot)
+// Reverse reverses a string
+^
+pkg/utils/utils.go:46:1: Comment should end in a period (godot)
+// Truncate truncates a string to a maximum length
+^
+pkg/utils/utils.go:57:1: Comment should end in a period (godot)
+// PadLeft pads a string to the left with the specified character
+^
+pkg/utils/utils.go:66:1: Comment should end in a period (godot)
+// PadRight pads a string to the right with the specified character
+^
+pkg/utils/utils.go:75:1: Comment should end in a period (godot)
+// ToCamelCase converts a string to camelCase
+^
+pkg/utils/utils.go:95:1: Comment should end in a period (godot)
+// ToSnakeCase converts a string to snake_case
+^
+pkg/utils/utils.go:102:1: Comment should end in a period (godot)
+// ToKebabCase converts a string to kebab-case
+^
+pkg/utils/utils.go:109:1: Comment should end in a period (godot)
+// SliceUtils provides slice manipulation utilities
+^
+pkg/utils/utils.go:112:1: Comment should end in a period (godot)
+// Slice returns a new SliceUtils instance
+^
+pkg/utils/utils.go:117:1: Comment should end in a period (godot)
+// Contains checks if a string slice contains a specific item
+^
+pkg/utils/utils.go:127:1: Comment should end in a period (godot)
+// Unique removes duplicate strings from a slice
+^
+pkg/utils/utils.go:142:1: Comment should end in a period (godot)
+// Filter filters a string slice based on a predicate function
+^
+pkg/utils/utils.go:153:1: Comment should end in a period (godot)
+// Map applies a function to each element of a string slice
+^
+pkg/utils/utils.go:162:1: Comment should end in a period (godot)
+// Chunk splits a slice into smaller chunks of specified size
+^
+pkg/utils/utils.go:179:1: Comment should end in a period (godot)
+// Sort sorts a string slice and returns a new slice
+^
+pkg/utils/utils.go:187:1: Comment should end in a period (godot)
+// FileUtils provides file system utilities
+^
+pkg/utils/utils.go:190:1: Comment should end in a period (godot)
+// File returns a new FileUtils instance
+^
+pkg/utils/utils.go:195:1: Comment should end in a period (godot)
+// Exists checks if a file or directory exists
+^
+pkg/utils/utils.go:201:1: Comment should end in a period (godot)
+// IsDir checks if a path is a directory
+^
+pkg/utils/utils.go:210:1: Comment should end in a period (godot)
+// IsFile checks if a path is a regular file
+^
+pkg/utils/utils.go:219:1: Comment should end in a period (godot)
+// Size returns the size of a file in bytes
+^
+pkg/utils/utils.go:228:1: Comment should end in a period (godot)
+// MkdirAll creates directories recursively
+^
+pkg/utils/utils.go:233:1: Comment should end in a period (godot)
+// Copy copies a file from src to dst
+^
+pkg/utils/utils.go:251:1: Comment should end in a period (godot)
+// ReadLines reads all lines from a file
+^
+pkg/utils/utils.go:267:1: Comment should end in a period (godot)
+// WriteLines writes lines to a file
+^
+pkg/utils/utils.go:273:1: Comment should end in a period (godot)
+// Glob returns all files matching a pattern
+^
+internal/cli/cli.go:83:1: printf-like formatting function 'PrintInfo' should be named 'PrintInfof' (goprintffuncname)
+func (c *BaseCommand) PrintInfo(format string, args ...interface{}) {
+^
+internal/cli/cli.go:92:1: printf-like formatting function 'PrintSuccess' should be named 'PrintSuccessf' (goprintffuncname)
+func (c *BaseCommand) PrintSuccess(format string, args ...interface{}) {
+^
+internal/cli/cli.go:101:1: printf-like formatting function 'PrintWarn' should be named 'PrintWarnf' (goprintffuncname)
+func (c *BaseCommand) PrintWarn(format string, args ...interface{}) {
+^
+internal/cli/cli.go:110:1: printf-like formatting function 'PrintError' should be named 'PrintErrorf' (goprintffuncname)
+func (c *BaseCommand) PrintError(format string, args ...interface{}) {
+^
+internal/cli/cli.go:119:1: printf-like formatting function 'PrintHeader' should be named 'PrintHeaderf' (goprintffuncname)
+func (c *BaseCommand) PrintHeader(format string, args ...interface{}) {
+^
+internal/cli/cli.go:128:1: printf-like formatting function 'PrintVerbose' should be named 'PrintVerbosef' (goprintffuncname)
+func (c *BaseCommand) PrintVerbose(format string, args ...interface{}) {
+^
+cmd/cli/serve/main.go:74:11: G112: Potential Slowloris Attack because ReadHeaderTimeout is not configured in the http.Server (gosec)
+		srv := &http.Server{Addr: addr, Handler: nil}
+		        ^
+cmd/cli/serve/main.go:84:21: G402: TLS MinVersion too low. (gosec)
+			srv.TLSConfig = &tls.Config{Certificates: []tls.Certificate{tlsCert}}
+			                 ^
+cmd/cli/serve/main.go:90:13: G114: Use of net/http serve function that has no support for setting timeouts (gosec)
+		log.Fatal(http.ListenAndServe(addr, nil))
+		          ^
+internal/cli/cli.go:85:3: G104: Errors unhandled (gosec)
+		InfoColor.Printf(format+"\n", args...)
+		^
+internal/cli/cli.go:94:3: G104: Errors unhandled (gosec)
+		SuccessColor.Printf(format+"\n", args...)
+		^
+internal/cli/cli.go:103:3: G104: Errors unhandled (gosec)
+		WarnColor.Printf(format+"\n", args...)
+		^
+internal/cli/cli.go:112:3: G104: Errors unhandled (gosec)
+		ErrorColor.Printf(format+"\n", args...)
+		^
+internal/cli/cli.go:121:3: G104: Errors unhandled (gosec)
+		HeaderColor.Printf(format+"\n", args...)
+		^
+internal/logger/logger.go:192:2: G104: Errors unhandled (gosec)
+	color.New(color.FgHiBlack).Fprintf(h.output, "%s ", timestamp)
+	^
+internal/logger/logger.go:193:2: G104: Errors unhandled (gosec)
+	levelColor.Fprintf(h.output, "[%s] ", levelText)
+	^
+internal/logger/logger.go:197:3: G104: Errors unhandled (gosec)
+		color.New(color.FgRed).Fprintf(h.output, "%s", record.Message)
+		^
+internal/logger/logger.go:204:3: G104: Errors unhandled (gosec)
+		color.New(color.FgHiBlack).Fprintf(h.output, " %s=%v", attr.Key, attr.Value)
+		^
+pkg/utils/utils.go:345:23: G404: Use of weak random number generator (math/rand or math/rand/v2 instead of crypto/rand) (gosec)
+		result[i] = charset[rand.IntN(len(charset))]
+		                    ^
+pkg/utils/utils.go:352:9: G404: Use of weak random number generator (math/rand or math/rand/v2 instead of crypto/rand) (gosec)
+	return rand.IntN(maxVal-minVal+1) + minVal
+	       ^
+pkg/utils/utils.go:357:9: G404: Use of weak random number generator (math/rand or math/rand/v2 instead of crypto/rand) (gosec)
+	return rand.IntN(2) == 1
+	       ^
+pkg/utils/utils.go:365:15: G404: Use of weak random number generator (math/rand or math/rand/v2 instead of crypto/rand) (gosec)
+	return items[rand.IntN(len(items))]
+	             ^
+cmd/cli/serve/main.go:130:10: shadow: declaration of "err" shadows declaration at line 122 (govet)
+		addrs, err := iface.Addrs()
+		       ^
+internal/config/config.go:157:5: shadow: declaration of "err" shadows declaration at line 151 (govet)
+	if err := os.MkdirAll(configDir, 0750); err != nil {
+	   ^
+pkg/utils/utils.go:307:8: shadow: declaration of "err" shadows declaration at line 300 (govet)
+	if _, err := io.Copy(hash, file); err != nil {
+	      ^
+pkg/utils/utils.go:323:8: shadow: declaration of "err" shadows declaration at line 316 (govet)
+	if _, err := io.Copy(hash, file); err != nil {
+	      ^
+pkg/utils/utils_test.go:248:2: for loop can be changed to use an integer range (Go 1.22+) (intrange)
+	for i := 0; i < b.N; i++ {
+	^
+pkg/utils/utils_test.go:256:2: for loop can be changed to use an integer range (Go 1.22+) (intrange)
+	for i := 0; i < 1000; i++ {
+	^
+pkg/utils/utils_test.go:261:2: for loop can be changed to use an integer range (Go 1.22+) (intrange)
+	for i := 0; i < b.N; i++ {
+	^
+cmd/cli/main/main.go:171:29: Magic number: 2, in <argument> detected (mnd)
+		Args:  cobra.MinimumNArgs(2),
+		                          ^
+cmd/cli/serve/main.go:96:44: Magic number: 2048, in <argument> detected (mnd)
+	priv, err := rsa.GenerateKey(rand.Reader, 2048)
+	                                          ^
+cmd/cli/serve/main.go:104:41: Magic number: 24, in <argument> detected (mnd)
+		NotAfter:              time.Now().Add(24 * time.Hour),
+		                                      ^
+cmd/tui/main/main.go:155:7: Magic number: 2, in <case> detected (mnd)
+	case 2: // System Information
+	     ^
+cmd/tui/main/main.go:157:7: Magic number: 3, in <case> detected (mnd)
+	case 3: // String Utilities
+	     ^
+cmd/tui/main/main.go:159:7: Magic number: 4, in <case> detected (mnd)
+	case 4: // Random Generators
+	     ^
+cmd/tui/main/main.go:161:7: Magic number: 5, in <case> detected (mnd)
+	case 5: // Configuration
+	     ^
+examples/basic/main.go:38:19: Magic number: 5, in <return> detected (mnd)
+		return len(s) > 5
+		                ^
+internal/config/config.go:102:31: Magic number: 8080, in <argument> detected (mnd)
+	viper.SetDefault("web.port", 8080)
+	                             ^
+cmd/cli/serve/main.go:45:1: `if *tlsFlag` has complex nested blocks (complexity: 5) (nestif)
+	if *tlsFlag {
+^
+cmd/cli/serve/main.go:65:1: `if *tlsFlag` has complex nested blocks (complexity: 8) (nestif)
+	if *tlsFlag {
+^
+cmd/cli/main/main.go:162:32: unused-parameter: parameter 'args' seems to be unused, consider removing or renaming it as _ (revive)
+		RunE: func(_ *cobra.Command, args []string) error {
+		                             ^
+cmd/cli/serve/main.go:86:10: superfluous-else: if block ends with call to log.Fatal function, so drop this else and outdent its block (revive)
+		} else {
+			log.Fatal(srv.ListenAndServeTLS(cert, key))
+		}
+internal/logger/logger.go:166:40: unused-parameter: parameter 'ctx' seems to be unused, consider removing or renaming it as _ (revive)
+func (h *ColorHandler) handleWithColor(ctx context.Context, record slog.Record) error {
+                                       ^
+pkg/utils/utils.go:2:9: var-naming: avoid meaningless package names (revive)
+package utils
+        ^
+pkg/utils/utils_test.go:224:3: redefines-builtin-id: redefinition of the built-in function min (revive)
+		min, max := 5, 15
+		^
+pkg/utils/utils_test.go:1:9: package should be `utils_test` instead of `utils` (testpackage)
+package utils
+        ^
+internal/cli/cli.go:44:2: const minTruncateLength is unused (unused)
+	minTruncateLength = 3
+	^
+175 issues:
+* cyclop: 1
+* errcheck: 4
+* forbidigo: 50
+* funlen: 1
+* gochecknoglobals: 12
+* gochecknoinits: 1
+* gocognit: 1
+* goconst: 1
+* gocritic: 7
+* godot: 50
+* goprintffuncname: 6
+* gosec: 16
+* govet: 4
+* intrange: 3
+* mnd: 9
+* nestif: 2
+* revive: 5
+* testpackage: 1
+* unused: 1

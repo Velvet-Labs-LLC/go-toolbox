@@ -16,13 +16,6 @@ tui:
   theme: default
   mouse_events: true
 
-# Web Application Settings
-web:
-  port: 8080
-  host: localhost
-  tls_cert: ""
-  tls_key: ""
-
 # File Operations
 file:
   max_file_size: 100MB

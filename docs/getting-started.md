@@ -179,7 +179,6 @@ toolbox/
 ├── cmd/                    # Main applications
 │   ├── cli/               # CLI tools
 │   ├── tui/               # Terminal UI apps
-│   └── web/               # Web applications
 ├── internal/              # Private code (like Python's private modules)
 │   ├── config/            # Configuration management
 │   ├── logger/            # Logging utilities

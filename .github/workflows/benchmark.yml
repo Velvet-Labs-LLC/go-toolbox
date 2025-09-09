@@ -118,7 +118,7 @@ jobs:
             label: "Linux AMD64"
     steps:
       - name: 📥 Checkout current code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           # For workflow_run events, checkout the head SHA of the triggering workflow
           ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
@@ -603,7 +603,7 @@ jobs:
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     steps:
       - name: 📥 Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 

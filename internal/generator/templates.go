@@ -9,8 +9,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/nate3d/toolbox/internal/config"
-	"github.com/nate3d/toolbox/internal/logger"
+	"github.com/nate3d/go-toolbox/internal/config"
+	"github.com/nate3d/go-toolbox/internal/logger"
 )
 
 const appName = "{{.ToolName}}"
@@ -88,8 +88,8 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/nate3d/toolbox/internal/config"
-	"github.com/nate3d/toolbox/internal/logger"
+	"github.com/nate3d/go-toolbox/internal/config"
+	"github.com/nate3d/go-toolbox/internal/logger"
 )
 
 const appName = "{{.ToolName}}"
@@ -258,8 +258,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/nate3d/toolbox/internal/config"
-	"github.com/nate3d/toolbox/internal/logger"
+	"github.com/nate3d/go-toolbox/internal/config"
+	"github.com/nate3d/go-toolbox/internal/logger"
 )
 
 const appName = "{{.ToolName}}"

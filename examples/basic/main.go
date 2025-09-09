@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/nate3d/toolbox/pkg/utils"
+	"github.com/nate3d/go-toolbox/pkg/utils"
 )
 
 // Example demonstrates basic usage of the toolbox utilities

@@ -58,10 +58,15 @@ clean:
 	@rm -rf $(BUILD_DIR)
 	@go clean
 
-## test: Run tests
+## test: Run tests (benchmarks when BENCH is set)
 test:
 	@echo "$(GREEN)Running tests...$(NC)"
-	@go test ./...
+	@if [ -n "$(BENCH)" ]; then \
+		echo "$(GREEN)Running benchmarks pattern: $(BENCH)...$(NC)"; \
+		go test -bench=$(BENCH) ./...; \
+	else \
+		go test ./...; \
+	fi
 
 ## test-verbose: Run tests with verbose output
 test-verbose:
@@ -90,7 +95,7 @@ fmt:
 	@echo "$(GREEN)Formatting code...$(NC)"
 	@go fmt ./...
 	@if command -v goimports >/dev/null 2>&1; then \
-		goimports -w -local github.com/nate3d/toolbox .; \
+		goimports -w -local github.com/nate3d/go-toolbox .; \
 	else \
 		echo "$(YELLOW)goimports not found, install with: go install golang.org/x/tools/cmd/goimports@latest$(NC)"; \
 	fi

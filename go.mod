@@ -1,4 +1,4 @@
-module github.com/nate3d/toolbox
+module github.com/nate3d/go-toolbox
 
 go 1.24.0
 

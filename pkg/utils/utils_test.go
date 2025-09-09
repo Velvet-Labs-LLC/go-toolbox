@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/nate3d/toolbox/pkg/utils"
+	"github.com/nate3d/go-toolbox/pkg/utils"
 )
 
 func TestStringUtils(t *testing.T) {

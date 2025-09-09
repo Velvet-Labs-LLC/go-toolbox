@@ -48,7 +48,7 @@ env:
   BENCHMARK_COUNT: "1" # Single run for speed
 
 permissions:
-  contents: read
+  contents: write
   pull-requests: write # Required for PR comments
   actions: read
   checks: write

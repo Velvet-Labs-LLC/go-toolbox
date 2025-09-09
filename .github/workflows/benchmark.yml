@@ -474,7 +474,7 @@ jobs:
     if: always() && github.event_name == 'pull_request'
     steps:
       - name: 📥 Download all benchmark results
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           path: all-results
 
@@ -608,7 +608,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: 📥 Download benchmark results
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           path: baseline-update
 

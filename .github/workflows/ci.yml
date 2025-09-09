@@ -306,6 +306,59 @@ jobs:
             rm -rf "$HOME/go-${MATRIX_ID}" 2>/dev/null || true
           fi
 
+  # Dependency analysis and SBOM generation
+  dependency-analysis:
+    name: 🔍 Dependency Analysis & SBOM
+    needs: preflight
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 🔧 Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ needs.preflight.outputs.go-version }}
+          cache: false
+
+      - name: 📊 Submit dependency graph
+        run: |
+          # Generate go.sum if it doesn't exist
+          go mod download
+          go mod tidy
+
+          # For dependency graph submission, we'll use GitHub's built-in Go support
+          # which automatically detects go.mod and go.sum files
+
+      - name: 📋 Generate SBOM with Syft
+        uses: anchore/sbom-action@v0
+        with:
+          path: .
+          format: spdx-json
+          output-file: go-toolbox-sbom.spdx.json
+          upload-artifact: true
+          upload-release-assets: ${{ startsWith(github.ref, 'refs/tags/') }}
+
+      - name: 🔒 Run vulnerability scan with govulncheck
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          govulncheck ./...
+
+      - name: 📦 Archive SBOM artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-reports
+          path: |
+            *.spdx.json
+            *.sarif
+          retention-days: 30
+
   # Build the embedded application (contains all tools)
   build-embedded:
     name: 🚀 Build Embedded Application

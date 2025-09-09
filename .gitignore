@@ -87,3 +87,15 @@ temp/
 # Build artifacts
 build/
 target/
+
+# SBOM and security scan outputs
+sbom-output/
+*.sbom
+*.spdx
+*.spdx.json
+*.cyclonedx.json
+*.cyclonedx.xml
+*.syft.json
+*.sarif
+grype-results.*
+trivy-results.*

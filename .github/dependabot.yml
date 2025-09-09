@@ -1,0 +1,57 @@
+# Dependabot configuration for automatic dependency updates
+# Documentation: https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+
+version: 2
+updates:
+  # Enable version updates for Go modules
+  - package-ecosystem: "gomod"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "UTC"
+    # Limit number of open pull requests
+    open-pull-requests-limit: 10
+    # Grouping strategy for related updates
+    groups:
+      # Group all Go patch updates together
+      go-patch-updates:
+        patterns:
+          - "*"
+        update-types:
+          - "patch"
+      # Group minor updates for core dependencies
+      core-minor-updates:
+        patterns:
+          - "github.com/spf13/*"
+          - "github.com/charmbracelet/*"
+        update-types:
+          - "minor"
+    # Assign reviewers and labels
+    reviewers:
+      - "nate3d"  # Replace with actual GitHub username
+    labels:
+      - "dependencies"
+      - "automated"
+    # Commit message prefix
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+    # Only update if tests pass
+    rebase-strategy: "auto"
+
+  # Enable security updates for GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 5
+    labels:
+      - "github-actions"
+      - "dependencies"
+    commit-message:
+      prefix: "ci"

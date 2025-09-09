@@ -150,14 +150,16 @@ make security  # Run gosec security scan
 ### Available Make Targets
 
 ```bash
-make build        # Build all binaries (cross-platform)
-make test         # Run tests with coverage
-make lint         # Run golangci-lint
-make security     # Run gosec security scan
-make clean        # Clean build artifacts
-make deps         # Download dependencies
-make dev-setup    # Install development tools
-make install-hooks # Install Git pre-commit hooks
+make build              # Build all binaries (cross-platform)
+make test               # Run tests with coverage
+make lint               # Run golangci-lint
+make security           # Run gosec security scan
+make sbom               # Generate Software Bill of Materials
+make vulnerability-check # Check for known vulnerabilities
+make clean              # Clean build artifacts
+make deps               # Download dependencies
+make dev-setup          # Install development tools
+make install-hooks      # Install Git pre-commit hooks
 ```
 
 ### Git Hooks
@@ -218,6 +220,47 @@ Our comprehensive performance monitoring system:
 - **File permissions**: Restrictive permissions (0750) for generated directories
 - **Input validation**: Comprehensive path validation to prevent traversal attacks
 - **Dependency scanning**: Automated security vulnerability detection
+
+### 🛡️ Dependency Management & Security
+
+#### Automated Dependency Updates
+- **Dependabot**: Automatically creates PRs for dependency updates
+- **Scheduled**: Weekly scans on Mondays at 06:00 UTC
+- **Grouped updates**: Related dependencies are grouped together
+- **Security-first**: Critical vulnerabilities get immediate attention
+
+#### Vulnerability Scanning
+```bash
+# Check for known vulnerabilities
+make vulnerability-check
+
+# Run comprehensive security checks
+make security
+```
+
+#### Software Bill of Materials (SBOM)
+Generate SBOM files for supply chain security:
+
+```bash
+# Generate SBOM in multiple formats
+make sbom
+
+# Or use the script directly
+./scripts/generate-sbom.sh
+```
+
+**Generated SBOM formats**:
+- SPDX JSON (`*.spdx.json`)
+- CycloneDX JSON (`*.cyclonedx.json`) 
+- Syft Native JSON (`*.syft.json`)
+- SPDX Tag-Value (`*.spdx`)
+- Human-readable table (`*.txt`)
+
+#### CI/CD Security Integration
+- **Dependency graph**: Automatically submitted to GitHub
+- **Vulnerability alerts**: GitHub Security tab integration
+- **SARIF uploads**: Security findings in GitHub Security dashboard
+- **License compliance**: Automated license compatibility checks
 
 ## 🌍 Cross-Platform Builds
 

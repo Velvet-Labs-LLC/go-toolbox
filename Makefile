@@ -17,7 +17,7 @@ GREEN=\033[0;32m
 YELLOW=\033[1;33m
 NC=\033[0m # No Color
 
-.PHONY: help build build-all clean test test-verbose test-coverage lint fmt vet run install deps tidy check-deps security update-deps
+.PHONY: help build build-all clean test test-verbose test-coverage lint fmt vet run install deps tidy check-deps security sbom vulnerability-check update-deps
 	bench all
 
 ## help: Show this help message
@@ -144,6 +144,22 @@ security:
 		gosec ./...; \
 	else \
 		echo "$(YELLOW)gosec not found, install with: go install github.com/securecodewarrior/gosec/v2/cmd/gosec@latest$(NC)"; \
+	fi
+
+## sbom: Generate Software Bill of Materials (SBOM)
+sbom:
+	@echo "$(GREEN)Generating SBOM...$(NC)"
+	@./scripts/generate-sbom.sh
+
+## vulnerability-check: Check for known vulnerabilities
+vulnerability-check:
+	@echo "$(GREEN)Checking for vulnerabilities...$(NC)"
+	@if command -v govulncheck >/dev/null 2>&1; then \
+		govulncheck ./...; \
+	else \
+		echo "$(YELLOW)Installing govulncheck...$(NC)"; \
+		go install golang.org/x/vuln/cmd/govulncheck@latest; \
+		govulncheck ./...; \
 	fi
 
 ## update-deps: Update all dependencies

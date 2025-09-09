@@ -3,7 +3,7 @@ module github.com/nate3d/go-toolbox
 go 1.24.0
 
 require (
-	github.com/charmbracelet/bubbletea v1.3.7
+	github.com/charmbracelet/bubbletea v1.3.8
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/fatih/color v1.18.0
 	github.com/manifoldco/promptui v0.9.0

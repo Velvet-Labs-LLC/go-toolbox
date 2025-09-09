@@ -88,6 +88,9 @@ go-toolbox/
 # Install development tools (linters, formatters, security scanners)
 make dev-setup
 
+# Install Git pre-commit hooks (recommended for contributors)
+make install-hooks
+
 # Verify installation
 make lint      # Run golangci-lint v2.4
 make test      # Run all tests with coverage
@@ -104,7 +107,21 @@ make security     # Run gosec security scan
 make clean        # Clean build artifacts
 make deps         # Download dependencies
 make dev-setup    # Install development tools
+make install-hooks # Install Git pre-commit hooks
 ```
+
+### Git Hooks
+
+The project includes a pre-commit hook that automatically runs before every commit:
+
+- **`make fmt`** - Formats code using gofmt
+- **`make lint`** - Runs golangci-lint to catch issues
+- **`make test`** - Runs all tests to ensure functionality
+
+Install with `make install-hooks`. The hook will:
+- ✅ **Format** your code automatically
+- ⚠️ **Block commits** if linting or tests fail
+- 💡 **Skip hook**: `git commit --no-verify` (not recommended)
 
 ### Code Quality Standards
 

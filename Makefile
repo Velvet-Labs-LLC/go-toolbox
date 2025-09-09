@@ -160,6 +160,11 @@ dev-setup:
 	@go install golang.org/x/tools/cmd/goimports@latest
 	@echo "$(GREEN)Development tools installed!$(NC)"
 
+## install-hooks: Install Git pre-commit hooks
+install-hooks: ## Install Git pre-commit hooks
+	@echo "$(GREEN)Installing Git hooks...$(NC)"
+	@./scripts/install-hooks.sh
+
 ## check: Run all checks (fmt, vet, lint, test)
 check: fmt vet lint test
 	@echo "$(GREEN)All checks passed!$(NC)"

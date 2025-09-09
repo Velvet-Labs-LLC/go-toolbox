@@ -166,10 +166,15 @@ install-hooks: ## Install Git pre-commit hooks
 	@echo "$(GREEN)Installing Git hooks...$(NC)"
 	@./scripts/install-hooks.sh
 
-## bench: Run benchmarks
+## bench: Run fast benchmarks (1s per benchmark)
 bench:
-	@echo "$(GREEN)Running benchmarks...$(NC)"
-	go test -bench=. ./...
+	@echo "$(GREEN)Running fast benchmarks...$(NC)"
+	go test -bench=. -benchmem -benchtime=1s ./...
+
+## bench-full: Run comprehensive benchmarks (5s per benchmark, 3 runs)
+bench-full:
+	@echo "$(GREEN)Running comprehensive benchmarks...$(NC)"
+	go test -bench=. -benchmem -benchtime=5s -count=3 ./...
 
 ## all: Run full pipeline (clean, fmt, lint, test, bench, build)
 all: clean fmt lint test bench build

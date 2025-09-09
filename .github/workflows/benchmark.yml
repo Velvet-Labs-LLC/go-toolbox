@@ -1,12 +1,13 @@
 name: 🚀 Performance Benchmarks
 
-# Comprehensive benchmark tracking with performance regression detection
-# Runs AFTER CI completes successfully to avoid duplication
+# Optimized benchmark tracking with performance regression detection
 # Features:
-# - Detailed benchmark results with fancy GitHub UI output
+# - Fast benchmarks by default (1s/1run) for quick feedback
+# - Comprehensive mode available (5s/3runs) for detailed analysis
+# - Isolated cache directories for self-hosted runners
+# - Optional CPU/Memory profiling
 # - Performance regression detection with alerts
 # - Historical comparison and trend analysis
-# - Multi-platform benchmark execution
 # - Automatic baseline updates on main branch
 
 on:
@@ -26,10 +27,25 @@ on:
         required: false
         default: "main"
         type: string
+      benchmark_mode:
+        description: "Benchmark mode: fast (1s/1run) or comprehensive (5s/3runs)"
+        required: false
+        default: "fast"
+        type: choice
+        options:
+          - fast
+          - comprehensive
+      enable_profiling:
+        description: "Enable CPU/Memory profiling (slower)"
+        required: false
+        default: false
+        type: boolean
 
 env:
   GO_VERSION: "1.24" # Keep consistent with ci.yml
   CACHE_VERSION: "v1" # Increment this to invalidate all caches
+  BENCHMARK_TIME: "1s" # Fast benchmarks by default
+  BENCHMARK_COUNT: "1" # Single run for speed
 
 permissions:
   contents: read
@@ -113,13 +129,37 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
 
-      - name: 💾 Cache Go modules and build cache
+      - name: � Configure Go cache directories
+        run: |
+          # Create unique workspace identifier for benchmark job
+          MATRIX_ID="bench-${{ matrix.goarch }}-${{ github.run_id }}-${{ github.run_attempt }}"
+
+          # Set unique cache directories for this benchmark job
+          export GOCACHE="$HOME/.cache/go-build-${MATRIX_ID}"
+          export GOMODCACHE="$HOME/go/pkg/mod-${MATRIX_ID}"
+          export GOPATH="$HOME/go-${MATRIX_ID}"
+          export GOBIN="${GOPATH}/bin"
+
+          echo "GOCACHE=${GOCACHE}" >> $GITHUB_ENV
+          echo "GOMODCACHE=${GOMODCACHE}" >> $GITHUB_ENV
+          echo "GOPATH=${GOPATH}" >> $GITHUB_ENV
+          echo "GOBIN=${GOBIN}" >> $GITHUB_ENV
+          echo "MATRIX_ID=${MATRIX_ID}" >> $GITHUB_ENV
+
+          mkdir -p "${GOCACHE}" "${GOMODCACHE}" "${GOPATH}" "${GOBIN}"
+
+          echo "✅ Benchmark Go cache directories configured for ${MATRIX_ID}:"
+          echo "  GOCACHE: ${GOCACHE}"
+          echo "  GOMODCACHE: ${GOMODCACHE}"
+          echo "  GOPATH: ${GOPATH}"
+          echo "  GOBIN: ${GOBIN}"
+
+      - name: �💾 Cache Go modules and build cache
         uses: actions/cache@v4
         with:
           path: |
-            ~/go/pkg/mod
-            ~/.cache/go-build
-          key: ${{ env.CACHE_VERSION }}-${{ runner.os }}-go-bench-${{ matrix.goarch }}-${{ hashFiles('**/go.sum') }}
+            ~/go-bench-${{ matrix.goarch }}-${{ github.run_id }}-${{ github.run_attempt }}
+          key: ${{ env.CACHE_VERSION }}-${{ runner.os }}-go-bench-${{ matrix.goarch }}-${{ github.run_id }}-${{ github.run_attempt }}-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ env.CACHE_VERSION }}-${{ runner.os }}-go-bench-${{ matrix.goarch }}-
             ${{ env.CACHE_VERSION }}-${{ runner.os }}-go-bench-
@@ -130,7 +170,7 @@ jobs:
 
       - name: 🔧 Install benchmark tools
         run: |
-          echo "Installing benchmark analysis tools..."
+          echo "Installing benchmark analysis tools to isolated GOBIN..."
           go install golang.org/x/perf/cmd/benchstat@latest
           go install golang.org/x/perf/cmd/benchfilter@latest
 
@@ -142,22 +182,50 @@ jobs:
         env:
           GOARCH: ${{ matrix.goarch }}
         run: |
-          echo "🚀 Running benchmarks for ${{ matrix.label }}..."
+          # Set benchmark parameters based on input or defaults
+          if [ "${{ github.event.inputs.benchmark_mode }}" = "comprehensive" ]; then
+            BENCH_TIME="5s"
+            BENCH_COUNT="3"
+            MODE_LABEL="Comprehensive"
+          else
+            BENCH_TIME="1s"
+            BENCH_COUNT="1"
+            MODE_LABEL="Fast"
+          fi
+
+          # Enable profiling based on input
+          if [ "${{ github.event.inputs.enable_profiling }}" = "true" ] || [ "${{ github.event.inputs.benchmark_mode }}" = "comprehensive" ]; then
+            ENABLE_PROFILING="true"
+          else
+            ENABLE_PROFILING="false"
+          fi
+
+          echo "🚀 Running ${MODE_LABEL} benchmarks for ${{ matrix.label }}..."
+          echo "⏱️  Benchmark time: ${BENCH_TIME}, Count: ${BENCH_COUNT}"
 
           # Create results directory
           mkdir -p benchmark-results
 
-          # Run benchmarks with extended output
-          echo "Running comprehensive benchmark suite..."
-          go test -bench=. -benchmem -benchtime=5s -count=3 ./... | tee "benchmark-results/current-${{ matrix.goarch }}.txt"
+          # Run main benchmarks with configurable parameters
+          echo "Running benchmark suite..."
+          go test -bench=. -benchmem -benchtime=${BENCH_TIME} -count=${BENCH_COUNT} ./... | tee "benchmark-results/current-${{ matrix.goarch }}.txt"
 
-          # Also run with CPU profiling for detailed analysis
-          echo "Running benchmarks with CPU profiling..."
-          go test -bench=. -benchmem -cpuprofile="benchmark-results/cpu-${{ matrix.goarch }}.prof" ./... > /dev/null 2>&1 || true
+          # Conditional profiling (only if enabled)
+          if [ "${ENABLE_PROFILING}" = "true" ]; then
+            echo "🔬 Running benchmarks with profiling (this may take longer)..."
+            
+            # CPU profiling
+            echo "  - CPU profiling..."
+            go test -bench=. -benchmem -benchtime=${BENCH_TIME} -cpuprofile="benchmark-results/cpu-${{ matrix.goarch }}.prof" ./... > /dev/null 2>&1 || true
 
-          # Run memory profiling
-          echo "Running benchmarks with memory profiling..."
-          go test -bench=. -benchmem -memprofile="benchmark-results/mem-${{ matrix.goarch }}.prof" ./... > /dev/null 2>&1 || true
+            # Memory profiling
+            echo "  - Memory profiling..."
+            go test -bench=. -benchmem -benchtime=${BENCH_TIME} -memprofile="benchmark-results/mem-${{ matrix.goarch }}.prof" ./... > /dev/null 2>&1 || true
+            
+            echo "✅ Profiling completed"
+          else
+            echo "⏭️  Profiling skipped (use comprehensive mode or enable profiling to include)"
+          fi
 
           # Generate benchmark statistics
           echo "📊 Current benchmark summary for ${{ matrix.label }}:"
@@ -226,7 +294,17 @@ jobs:
 
           if [ "$checkout_success" = true ]; then
             echo "🏃 Running baseline benchmarks on $BASELINE_REF..."
-            go test -bench=. -benchmem -benchtime=5s -count=3 ./... | tee "benchmark-results/baseline-${{ matrix.goarch }}.txt" || true
+            
+            # Use same timing as current benchmarks
+            if [ "${{ github.event.inputs.benchmark_mode }}" = "comprehensive" ]; then
+              BENCH_TIME="5s"
+              BENCH_COUNT="3"
+            else
+              BENCH_TIME="1s"
+              BENCH_COUNT="1"
+            fi
+            
+            go test -bench=. -benchmem -benchtime=${BENCH_TIME} -count=${BENCH_COUNT} ./... | tee "benchmark-results/baseline-${{ matrix.goarch }}.txt" || true
             
             # Return to current commit
             echo "🔄 Returning to original commit: $current_commit"
@@ -372,6 +450,21 @@ jobs:
             echo ""
             echo "::warning title=Performance Regression::$REGRESSIONS benchmark regressions detected for ${{ matrix.label }}"
           fi
+
+      - name: 🧹 Cleanup benchmark cache (self-hosted)
+        if: always()
+        run: |
+          echo "🧹 Cleaning up benchmark cache directories..."
+
+          # Clean up this job's isolated cache directories
+          MATRIX_ID="bench-${{ matrix.goarch }}-${{ github.run_id }}-${{ github.run_attempt }}"
+
+          # Remove isolated directories for this specific benchmark job
+          rm -rf "$HOME/.cache/go-build-${MATRIX_ID}" 2>/dev/null || true
+          rm -rf "$HOME/go/pkg/mod-${MATRIX_ID}" 2>/dev/null || true  
+          rm -rf "$HOME/go-${MATRIX_ID}" 2>/dev/null || true
+
+          echo "✅ Benchmark cache cleanup completed for ${MATRIX_ID}"
 
   # Combine results and post PR comment
   benchmark-summary:

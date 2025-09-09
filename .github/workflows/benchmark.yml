@@ -1,6 +1,7 @@
-name: 🚀 Benchmark Performance Analysis
+name: 🚀 Performance Benchmarks
 
 # Comprehensive benchmark tracking with performance regression detection
+# Runs AFTER CI completes successfully to avoid duplication
 # Features:
 # - Detailed benchmark results with fancy GitHub UI output
 # - Performance regression detection with alerts
@@ -10,10 +11,15 @@ name: 🚀 Benchmark Performance Analysis
 
 on:
   push:
-    branches: [main, develop, feature/*]
+    branches: [main] # Only run comprehensive benchmarks on main branch
   pull_request:
-    branches: [main, develop]
-  workflow_dispatch: # Allow manual trigger
+    branches: [main, develop] # Run on PRs to main/develop for regression detection
+  workflow_run:
+    workflows: ["CI"] # Run after CI completes successfully to avoid duplication
+    types:
+      - completed
+    branches: [main, develop, feature/*] # Run on feature branches only after CI passes
+  workflow_dispatch: # Allow manual trigger for ad-hoc performance testing
     inputs:
       baseline_ref:
         description: "Git reference to use as baseline (default: main)"
@@ -32,9 +38,61 @@ permissions:
   checks: write
 
 jobs:
+  # Check if we should run benchmarks
+  should-run:
+    name: 🔍 Check if benchmarks should run
+    runs-on: ubuntu-latest
+    outputs:
+      should-run: ${{ steps.check.outputs.should-run }}
+    steps:
+      - name: Check conditions
+        id: check
+        run: |
+          echo "Event: ${{ github.event_name }}"
+          echo "Ref: ${{ github.ref }}"
+
+          # Always run on workflow_dispatch
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "Manual trigger - running benchmarks"
+            echo "should-run=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Always run on direct push to main
+          if [ "${{ github.event_name }}" = "push" ] && [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            echo "Push to main - running benchmarks"
+            echo "should-run=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Always run on pull requests
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "Pull request - running benchmarks"
+            echo "should-run=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # For workflow_run, only run if CI was successful
+          if [ "${{ github.event_name }}" = "workflow_run" ]; then
+            if [ "${{ github.event.workflow_run.conclusion }}" = "success" ]; then
+              echo "CI workflow successful - running benchmarks"
+              echo "should-run=true" >> $GITHUB_OUTPUT
+            else
+              echo "CI workflow failed/cancelled - skipping benchmarks"
+              echo "should-run=false" >> $GITHUB_OUTPUT
+            fi
+            exit 0
+          fi
+
+          # Default to not running
+          echo "Condition not met - skipping benchmarks"
+          echo "should-run=false" >> $GITHUB_OUTPUT
+
   benchmark:
     name: 🏁 Performance Benchmarks
     runs-on: ubuntu-latest
+    needs: should-run
+    if: needs.should-run.outputs.should-run == 'true'
     strategy:
       matrix:
         # Test on different architectures for comprehensive performance analysis
@@ -49,6 +107,8 @@ jobs:
       - name: 📥 Checkout current code
         uses: actions/checkout@v4
         with:
+          # For workflow_run events, checkout the head SHA of the triggering workflow
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
           fetch-depth: 0 # Fetch full history for baseline comparison
 
       - name: 🔧 Set up Go
@@ -75,7 +135,11 @@ jobs:
         run: |
           echo "Installing benchmark analysis tools..."
           go install golang.org/x/perf/cmd/benchstat@latest
-          go install golang.org/x/perf/cmd/benchcmp@latest
+          go install golang.org/x/perf/cmd/benchfilter@latest
+
+          echo "✅ Installed benchmark tools:"
+          echo "  - benchstat: Statistical analysis and A/B comparisons"
+          echo "  - benchfilter: Benchmark result filtering"
 
       - name: 🏃 Run current benchmarks
         env:
@@ -149,8 +213,15 @@ jobs:
 
           # Generate statistical comparison
           if [ -f "benchmark-results/baseline-${{ matrix.goarch }}.txt" ] && [ -s "benchmark-results/baseline-${{ matrix.goarch }}.txt" ]; then
-            echo "📈 Statistical analysis using benchstat:"
-            benchstat "benchmark-results/baseline-${{ matrix.goarch }}.txt" "benchmark-results/current-${{ matrix.goarch }}.txt" | tee "benchmark-results/comparison-${{ matrix.goarch }}.txt"
+            echo "📈 Statistical analysis using benchstat..."
+            
+            # Filter benchmarks for cleaner analysis (remove PASS/FAIL lines)
+            echo "🔧 Filtering benchmark data for analysis..."
+            benchfilter "*" "benchmark-results/baseline-${{ matrix.goarch }}.txt" > "benchmark-results/baseline-filtered-${{ matrix.goarch }}.txt" 2>/dev/null || cp "benchmark-results/baseline-${{ matrix.goarch }}.txt" "benchmark-results/baseline-filtered-${{ matrix.goarch }}.txt"
+            benchfilter "*" "benchmark-results/current-${{ matrix.goarch }}.txt" > "benchmark-results/current-filtered-${{ matrix.goarch }}.txt" 2>/dev/null || cp "benchmark-results/current-${{ matrix.goarch }}.txt" "benchmark-results/current-filtered-${{ matrix.goarch }}.txt"
+            
+            # Run benchstat on filtered data
+            benchstat "benchmark-results/baseline-filtered-${{ matrix.goarch }}.txt" "benchmark-results/current-filtered-${{ matrix.goarch }}.txt" | tee "benchmark-results/comparison-${{ matrix.goarch }}.txt"
             
             # Check for regressions (>10% performance decrease)
             echo "🔍 Checking for performance regressions..."
@@ -158,26 +229,54 @@ jobs:
             REGRESSIONS=$(grep -E "~|%" "benchmark-results/comparison-${{ matrix.goarch }}.txt" | grep -E "\+[0-9]+\.[0-9]+%" | wc -l || echo "0")
             IMPROVEMENTS=$(grep -E "~|%" "benchmark-results/comparison-${{ matrix.goarch }}.txt" | grep -E "\-[0-9]+\.[0-9]+%" | wc -l || echo "0")
             
+            # Check for significant regressions (>50%)
+            CRITICAL_REGRESSIONS=$(grep -E "~|%" "benchmark-results/comparison-${{ matrix.goarch }}.txt" | grep -E "\+[5-9][0-9]\.[0-9]+%|\+[0-9]{3,}\.[0-9]+%" | wc -l || echo "0")
+            
             echo "regressions=$REGRESSIONS" >> $GITHUB_OUTPUT
             echo "improvements=$IMPROVEMENTS" >> $GITHUB_OUTPUT
+            echo "critical_regressions=$CRITICAL_REGRESSIONS" >> $GITHUB_OUTPUT
             
-            # Create summary
+            # Create enhanced summary
             {
               echo "## 🏁 Benchmark Results Summary - ${{ matrix.label }}"
               echo ""
               echo "**Performance Changes:**"
               echo "- 🔴 Regressions detected: $REGRESSIONS"
               echo "- 🟢 Improvements detected: $IMPROVEMENTS"
+              if [ "$CRITICAL_REGRESSIONS" -gt 0 ]; then
+                echo "- 🚨 **Critical regressions (>50%)**: $CRITICAL_REGRESSIONS"
+              fi
               echo ""
               echo "### 📊 Detailed Statistical Analysis"
               echo "\`\`\`"
               cat "benchmark-results/comparison-${{ matrix.goarch }}.txt"
               echo "\`\`\`"
               echo ""
-              echo "### 📈 Current Benchmark Results"
+              echo "### 📈 Current Benchmark Results (Top 20)"
               echo "\`\`\`"
               grep "^Benchmark" "benchmark-results/current-${{ matrix.goarch }}.txt" | head -20
               echo "\`\`\`"
+              
+              # Add performance insights
+              echo ""
+              echo "### 🔍 Performance Insights"
+              if [ "$CRITICAL_REGRESSIONS" -gt 0 ]; then
+                echo "⚠️ **Critical Performance Issues Detected!**"
+                echo ""
+                echo "The following benchmarks show severe performance regressions (>50%):"
+                echo "\`\`\`"
+                grep -E "\+[5-9][0-9]\.[0-9]+%|\+[0-9]{3,}\.[0-9]+%" "benchmark-results/comparison-${{ matrix.goarch }}.txt" | head -5
+                echo "\`\`\`"
+                echo ""
+              fi
+              
+              if [ "$IMPROVEMENTS" -gt 0 ]; then
+                echo "✅ **Performance Improvements:**"
+                echo "\`\`\`"
+                grep -E "\-[0-9]+\.[0-9]+%" "benchmark-results/comparison-${{ matrix.goarch }}.txt" | head -5
+                echo "\`\`\`"
+                echo ""
+              fi
             } > "benchmark-results/summary-${{ matrix.goarch }}.md"
             
             echo "has_comparison=true" >> $GITHUB_OUTPUT
@@ -208,17 +307,32 @@ jobs:
             benchmark-results/
           retention-days: 30
 
-      - name: ⚠️ Check for critical regressions
+      - name: ⚠️ Check for performance issues
         if: steps.analysis.outputs.regressions != '0' && steps.analysis.outputs.regressions != ''
         run: |
-          echo "🚨 CRITICAL: Performance regressions detected!"
-          echo "Number of regressions: ${{ steps.analysis.outputs.regressions }}"
-          echo ""
-          echo "Please review the benchmark comparison above."
-          echo "Consider optimizing the affected code paths."
+          REGRESSIONS="${{ steps.analysis.outputs.regressions }}"
+          CRITICAL="${{ steps.analysis.outputs.critical_regressions }}"
 
-          # Don't fail the job, just warn
-          echo "::warning title=Performance Regression::${{ steps.analysis.outputs.regressions }} benchmark regressions detected for ${{ matrix.label }}"
+          if [ "$CRITICAL" != "0" ] && [ "$CRITICAL" != "" ]; then
+            echo "🚨 CRITICAL: Severe performance regressions detected!"
+            echo "Number of critical regressions (>50%): $CRITICAL"
+            echo "Total regressions: $REGRESSIONS"
+            echo ""
+            echo "⚠️  IMMEDIATE ACTION REQUIRED:"
+            echo "- Review the affected benchmark functions"
+            echo "- Consider reverting recent changes"
+            echo "- Profile the code to identify bottlenecks"
+            echo ""
+            echo "::error title=Critical Performance Regression::$CRITICAL severe benchmark regressions (>50%) detected for ${{ matrix.label }}"
+          else
+            echo "⚠️ Performance regressions detected"
+            echo "Number of regressions: $REGRESSIONS"
+            echo ""
+            echo "Please review the benchmark comparison above."
+            echo "Consider optimizing the affected code paths."
+            echo ""
+            echo "::warning title=Performance Regression::$REGRESSIONS benchmark regressions detected for ${{ matrix.label }}"
+          fi
 
   # Combine results and post PR comment
   benchmark-summary:
@@ -248,6 +362,7 @@ jobs:
           # Add results for each architecture
           total_regressions=0
           total_improvements=0
+          total_critical=0
 
           for arch_dir in all-results/benchmark-results-*; do
             if [ -d "$arch_dir" ]; then
@@ -259,29 +374,45 @@ jobs:
                 cat "$arch_dir/summary-$arch.md" >> pr-comment.md
                 echo "" >> pr-comment.md
                 
-                # Count regressions and improvements (basic parsing)
+                # Count regressions and improvements (enhanced parsing)
                 if [ -f "$arch_dir/comparison-$arch.txt" ]; then
                   arch_regressions=$(grep -E "\+[0-9]+\.[0-9]+%" "$arch_dir/comparison-$arch.txt" | wc -l || echo "0")
                   arch_improvements=$(grep -E "\-[0-9]+\.[0-9]+%" "$arch_dir/comparison-$arch.txt" | wc -l || echo "0")
+                  arch_critical=$(grep -E "\+[5-9][0-9]\.[0-9]+%|\+[0-9]{3,}\.[0-9]+%" "$arch_dir/comparison-$arch.txt" | wc -l || echo "0")
+                  
                   total_regressions=$((total_regressions + arch_regressions))
                   total_improvements=$((total_improvements + arch_improvements))
+                  total_critical=$((total_critical + arch_critical))
                 fi
               fi
             fi
           done
 
-          # Add footer with summary
+          # Add footer with enhanced summary
           {
             echo "---"
             echo ""
-            echo "### 📈 Overall Summary"
+            echo "### 📈 Overall Performance Summary"
             echo "- **Total Regressions:** $total_regressions"
             echo "- **Total Improvements:** $total_improvements"
+            if [ $total_critical -gt 0 ]; then
+              echo "- **🚨 Critical Regressions (>50%):** $total_critical"
+            fi
             echo ""
-            if [ $total_regressions -gt 0 ]; then
+            if [ $total_critical -gt 0 ]; then
+              echo "🚨 **CRITICAL:** Severe performance regressions detected!"
+              echo ""
+              echo "**Immediate action required:**"
+              echo "- Review and optimize critical performance paths"
+              echo "- Consider reverting recent changes"
+              echo "- Run profiling to identify bottlenecks"
+            elif [ $total_regressions -gt 0 ]; then
               echo "⚠️ **Action Required:** Performance regressions detected. Please review and optimize."
             else
-              echo "✅ **Great!** No performance regressions detected."
+              echo "✅ **Excellent!** No performance regressions detected."
+              if [ $total_improvements -gt 0 ]; then
+                echo "🎉 **Bonus:** Performance improvements detected!"
+              fi
             fi
             echo ""
             echo "📝 *This comment will be updated automatically when new commits are pushed.*"

@@ -200,10 +200,16 @@ golangci-lint run
 ```
 
 ### Benchmark Tracking
-The CI automatically tracks performance regressions:
-- Runs benchmarks on every commit
-- Compares against baseline performance
-- Fails PR if significant regressions detected
+Our comprehensive performance monitoring system:
+- **Smart triggers**: Benchmarks run after CI completes successfully
+- **Regression detection**: Automatically compares against baseline performance  
+- **PR comments**: Detailed performance reports with statistical analysis
+- **Multi-architecture**: Tests on AMD64 and ARM64 for comprehensive coverage
+- **Baseline management**: Automatic baseline updates on main branch commits
+
+**Workflow separation**:
+- `CI`: Fast feedback (build, test, lint, security) - ~10-15 minutes
+- `Benchmarks`: Deep performance analysis - ~20-30 minutes (runs after CI)
 
 ## 🔐 Security Features
 

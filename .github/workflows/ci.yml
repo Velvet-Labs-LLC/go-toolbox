@@ -236,105 +236,10 @@ jobs:
         with:
           args: "./..."
 
-  performance:
-    name: 🚀 Performance Check
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v4
-        with:
-          go-version: ${{ env.GO_VERSION }}
-
-      - name: Cache Go modules
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/go/pkg/mod
-            ~/.cache/go-build
-          key: ${{ env.CACHE_VERSION }}-${{ runner.os }}-go-perf-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ env.CACHE_VERSION }}-${{ runner.os }}-go-perf-
-            ${{ env.CACHE_VERSION }}-${{ runner.os }}-go-
-
-      - name: Download dependencies
-        run: go mod download
-
-      - name: 🏃 Run performance benchmarks (CI mode)
-        run: |
-          echo "🏃 Running CI performance benchmarks..."
-
-          # Create performance results directory
-          mkdir -p perf-results
-
-          # Run benchmarks with shorter time for CI
-          echo "Running benchmarks for CI validation..."
-          go test -bench=. -benchmem -benchtime=1s -timeout=5m ./... | tee perf-results/ci-benchmarks.txt
-
-          # Extract key metrics
-          echo "📊 Performance Summary:" | tee perf-results/summary.txt
-          echo "======================" | tee -a perf-results/summary.txt
-
-          BENCHMARK_COUNT=$(grep "^Benchmark" perf-results/ci-benchmarks.txt | wc -l)
-          echo "🏁 Total benchmarks run: $BENCHMARK_COUNT" | tee -a perf-results/summary.txt
-
-          if [ $BENCHMARK_COUNT -gt 0 ]; then
-            echo "📈 Top 5 fastest operations:" | tee -a perf-results/summary.txt
-            grep "^Benchmark" perf-results/ci-benchmarks.txt | sort -k3 -n | head -5 | tee -a perf-results/summary.txt
-            echo "" | tee -a perf-results/summary.txt
-            echo "🐌 Top 5 slowest operations:" | tee -a perf-results/summary.txt
-            grep "^Benchmark" perf-results/ci-benchmarks.txt | sort -k3 -nr | head -5 | tee -a perf-results/summary.txt
-          else
-            echo "⚠️ No benchmarks found or executed" | tee -a perf-results/summary.txt
-          fi
-
-          echo "✅ CI performance check completed"
-
-      - name: 🔍 Performance analysis
-        run: |
-          echo "🔍 Analyzing performance characteristics..."
-
-          # Basic performance analysis
-          if [ -f perf-results/ci-benchmarks.txt ] && [ -s perf-results/ci-benchmarks.txt ]; then
-            # Check for extremely slow operations (>1 second per operation)
-            SLOW_OPS=$(grep "^Benchmark" perf-results/ci-benchmarks.txt | awk '$3 > 1000000000 {count++} END {print count+0}')
-            
-            # Check for high memory allocations (>1MB per operation)
-            HIGH_MEM=$(grep "^Benchmark" perf-results/ci-benchmarks.txt | awk '$5 > 1048576 {count++} END {print count+0}')
-            
-            echo "⚠️ Performance warnings:" | tee -a perf-results/summary.txt
-            if [ $SLOW_OPS -gt 0 ]; then
-              echo "  - $SLOW_OPS operations take >1 second per iteration" | tee -a perf-results/summary.txt
-              echo "::warning title=Slow Operations::$SLOW_OPS benchmark operations take more than 1 second per iteration"
-            fi
-            
-            if [ $HIGH_MEM -gt 0 ]; then
-              echo "  - $HIGH_MEM operations allocate >1MB per iteration" | tee -a perf-results/summary.txt
-              echo "::warning title=High Memory Usage::$HIGH_MEM benchmark operations allocate more than 1MB per iteration"
-            fi
-            
-            if [ $SLOW_OPS -eq 0 ] && [ $HIGH_MEM -eq 0 ]; then
-              echo "  - ✅ All operations perform within reasonable limits" | tee -a perf-results/summary.txt
-            fi
-          else
-            echo "⚠️ No benchmark data to analyze" | tee -a perf-results/summary.txt
-          fi
-
-      - name: 📤 Upload performance artifacts
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: performance-results
-          path: |
-            perf-results/
-          retention-days: 7
-
   build:
     name: Build
     runs-on: ubuntu-latest
-    needs: [test, format, lint, security, performance]
+    needs: [test, format, lint, security]
     strategy:
       matrix:
         goos: [linux, windows, darwin]
@@ -567,7 +472,7 @@ jobs:
   release:
     name: Release
     runs-on: ubuntu-latest
-    needs: [test, format, lint, security, performance, build]
+    needs: [test, format, lint, security, build]
     if: startsWith(github.ref, 'refs/tags/v')
     steps:
       - name: Checkout code

@@ -1,0 +1,96 @@
+?   	github.com/nate3d/go-toolbox/cmd/cli/main	[no test files]
+?   	github.com/nate3d/go-toolbox/cmd/cli/serve	[no test files]
+?   	github.com/nate3d/go-toolbox/cmd/embedded	[no test files]
+?   	github.com/nate3d/go-toolbox/cmd/tui/main	[no test files]
+?   	github.com/nate3d/go-toolbox/cmd/unified	[no test files]
+Go Toolbox Examples
+===================
+
+1. String Utilities:
+Original: hello world
+Reversed: dlrow olleh
+CamelCase: helloWorld
+SnakeCase: hello_world
+KebabCase: hello-world
+
+2. Slice Utilities:
+Original: [apple banana apple cherry banana]
+Unique: [apple banana cherry]
+Contains 'apple': true
+Sorted: [apple apple banana banana cherry]
+Long fruits (>5 chars): [banana cherry banana]
+
+3. Random Utilities:
+Random string (10 chars): 1ZcHEVPz2m
+Random int (1-100): 48
+Random bool: true
+Random choice from fruits: banana
+
+4. Hash Utilities:
+Text: hello world
+MD5: b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9
+SHA256: b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9
+
+5. Validation Utilities:
+Email 'test@example.com' is valid: true
+Email 'invalid.email' is valid: false
+Email 'user@domain.co.uk' is valid: true
+IP '192.168.1.1' is valid: true
+IP '10.0.0.1' is valid: true
+IP '256.1.1.1' is valid: false
+IP 'not.an.ip' is valid: false
+
+6. File Utilities:
+File 'go.mod' exists: false
+File 'nonexistent.txt' exists: false
+File 'README.md' exists: false
+
+7. Conversion Utilities:
+String '42' to int: 42
+String '3.14' to float: 3.14
+String 'true' to bool: true
+Int 42 to string: '42'
+Float 3.14 to string: '3.14'
+Bool true to string: 'true'
+
+Example completed successfully!
+goos: linux
+goarch: amd64
+pkg: github.com/nate3d/go-toolbox/examples/basic
+cpu: AMD Ryzen 9 9950X 16-Core Processor            
+BenchmarkStringUtils/Reverse_Small-8         	21627980	        54.17 ns/op	       0 B/op	       0 allocs/op
+BenchmarkStringUtils/Reverse_Large-8         	   19830	     60382 ns/op	   51200 B/op	       2 allocs/op
+BenchmarkStringUtils/CamelCase-8             	10588977	       114.4 ns/op	      56 B/op	       3 allocs/op
+BenchmarkStringUtils/SnakeCase-8             	  632157	      1772 ns/op	    1701 B/op	      21 allocs/op
+BenchmarkSliceUtils/Unique-8                 	  162704	      7289 ns/op	     952 B/op	       8 allocs/op
+BenchmarkSliceUtils/Sort-8                   	   77938	     15220 ns/op	   16384 B/op	       1 allocs/op
+BenchmarkSliceUtils/Filter-8                 	  277840	      4486 ns/op	   18800 B/op	      10 allocs/op
+BenchmarkRandomUtils/RandomString_10-8       	  623707	      1936 ns/op	      32 B/op	       2 allocs/op
+BenchmarkRandomUtils/RandomInt-8             	 6043492	       189.0 ns/op	       0 B/op	       0 allocs/op
+BenchmarkHashUtils/MD5-8                     	 3494430	       340.9 ns/op	     544 B/op	       3 allocs/op
+BenchmarkHashUtils/SHA256-8                  	 3444229	       340.8 ns/op	     544 B/op	       3 allocs/op
+BenchmarkValidationUtils/EmailValidation-8   	  316996	      4011 ns/op	    5869 B/op	      66 allocs/op
+BenchmarkValidationUtils/IPValidation-8      	  184077	      6352 ns/op	   10468 B/op	     125 allocs/op
+BenchmarkFileUtils/Exists-8                  	 3787653	       309.3 ns/op	     224 B/op	       2 allocs/op
+BenchmarkConvertUtils/StringToInt-8          	386719904	         3.079 ns/op	       0 B/op	       0 allocs/op
+BenchmarkConvertUtils/StringToFloat-8        	89718297	        13.82 ns/op	       0 B/op	       0 allocs/op
+BenchmarkConvertUtils/StringToBool-8         	1000000000	         0.2680 ns/op	       0 B/op	       0 allocs/op
+BenchmarkConcurrencyExample/ConcurrentHash-8 	  611347	      1734 ns/op	     568 B/op	      13 allocs/op
+PASS
+ok  	github.com/nate3d/go-toolbox/examples/basic	23.242s
+PASS
+ok  	github.com/nate3d/go-toolbox/internal/cli	0.004s
+PASS
+ok  	github.com/nate3d/go-toolbox/internal/config	0.004s
+PASS
+ok  	github.com/nate3d/go-toolbox/internal/generator	0.003s
+PASS
+ok  	github.com/nate3d/go-toolbox/internal/logger	0.002s
+goos: linux
+goarch: amd64
+pkg: github.com/nate3d/go-toolbox/pkg/utils
+cpu: AMD Ryzen 9 9950X 16-Core Processor            
+BenchmarkStringReverse-8   	 5323884	       223.2 ns/op	     192 B/op	       2 allocs/op
+BenchmarkSliceUnique-8     	   80817	     14788 ns/op	   11160 B/op	      17 allocs/op
+PASS
+ok  	github.com/nate3d/go-toolbox/pkg/utils	2.771s

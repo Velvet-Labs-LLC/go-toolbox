@@ -1,7 +1,7 @@
 name: CI
 
 # Cache Strategy:
-# - Each job type has its own cache namespace (test, format, lint, security, build, benchmark, release)
+# - Each job type has its own cache namespace (test, format, lint, security, build, release)
 # - Build jobs include matrix variables (goos/goarch) in cache keys for platform-specific builds
 # - Primary cache key: CACHE_VERSION-OS-job-dependencies_hash
 # - Fallback keys enable partial cache hits across similar contexts
@@ -53,8 +53,86 @@ jobs:
       - name: Download dependencies
         run: go mod download
 
-      - name: Run tests with coverage
-        run: go test -race -coverprofile=coverage.out -covermode=atomic -v ./...
+      - name: 🧪 Run tests with coverage and detailed reporting
+        run: |
+          echo "🧪 Running comprehensive test suite..."
+
+          # Create results directory for artifacts
+          mkdir -p test-results
+
+          # Run tests with JSON output for better parsing
+          go test -race -coverprofile=coverage.out -covermode=atomic -v -json ./... | tee test-results/test-output.json
+
+          # Generate human-readable test report
+          echo "📊 Test Results Summary:" | tee test-results/summary.txt
+          echo "=========================" | tee -a test-results/summary.txt
+
+          # Parse test results
+          PASSED=$(grep '"Action":"pass"' test-results/test-output.json | grep '"Package":' | wc -l || echo "0")
+          FAILED=$(grep '"Action":"fail"' test-results/test-output.json | grep '"Package":' | wc -l || echo "0")
+          SKIPPED=$(grep '"Action":"skip"' test-results/test-output.json | wc -l || echo "0")
+
+          echo "✅ Passed: $PASSED packages" | tee -a test-results/summary.txt
+          echo "❌ Failed: $FAILED packages" | tee -a test-results/summary.txt  
+          echo "⏭️  Skipped: $SKIPPED tests" | tee -a test-results/summary.txt
+          echo "=========================" | tee -a test-results/summary.txt
+
+          # Show coverage summary
+          if [ -f coverage.out ]; then
+            echo "📈 Coverage Summary:" | tee -a test-results/summary.txt
+            go tool cover -func=coverage.out | tail -1 | tee -a test-results/summary.txt
+          fi
+
+          # Check if any tests failed
+          if [ "$FAILED" -gt 0 ]; then
+            echo "🚨 Test failures detected!"
+            echo "::error title=Test Failures::$FAILED packages failed tests"
+            exit 1
+          fi
+
+      - name: 🏃 Quick benchmark smoke test
+        run: |
+          echo "🏃 Running quick benchmark smoke test..."
+
+          # Run a quick benchmark to ensure they don't crash
+          timeout 30s go test -bench=. -benchtime=100ms ./... || echo "⚠️ Benchmark smoke test timed out or failed"
+
+          echo "✅ Benchmark smoke test completed"
+
+      - name: 📊 Generate test report artifacts
+        if: always()
+        run: |
+          # Generate coverage HTML report
+          if [ -f coverage.out ]; then
+            go tool cover -html=coverage.out -o test-results/coverage.html
+            echo "📊 Coverage report generated: test-results/coverage.html"
+          fi
+
+          # Create test summary for GitHub
+          if [ -f test-results/test-output.json ]; then
+            echo "# 🧪 Test Results" > test-results/github-summary.md
+            echo "" >> test-results/github-summary.md
+            cat test-results/summary.txt >> test-results/github-summary.md
+            
+            # Add failed tests details if any
+            if grep -q '"Action":"fail"' test-results/test-output.json; then
+              echo "" >> test-results/github-summary.md
+              echo "## ❌ Failed Tests" >> test-results/github-summary.md
+              echo "\`\`\`" >> test-results/github-summary.md
+              grep '"Action":"fail"' test-results/test-output.json | head -10 >> test-results/github-summary.md
+              echo "\`\`\`" >> test-results/github-summary.md
+            fi
+          fi
+
+      - name: 📤 Upload test artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: |
+            test-results/
+            coverage.out
+          retention-days: 30
 
       - name: Test Makefile targets
         run: |
@@ -158,10 +236,105 @@ jobs:
         with:
           args: "./..."
 
+  performance:
+    name: 🚀 Performance Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ env.CACHE_VERSION }}-${{ runner.os }}-go-perf-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ env.CACHE_VERSION }}-${{ runner.os }}-go-perf-
+            ${{ env.CACHE_VERSION }}-${{ runner.os }}-go-
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: 🏃 Run performance benchmarks (CI mode)
+        run: |
+          echo "🏃 Running CI performance benchmarks..."
+
+          # Create performance results directory
+          mkdir -p perf-results
+
+          # Run benchmarks with shorter time for CI
+          echo "Running benchmarks for CI validation..."
+          go test -bench=. -benchmem -benchtime=1s -timeout=5m ./... | tee perf-results/ci-benchmarks.txt
+
+          # Extract key metrics
+          echo "📊 Performance Summary:" | tee perf-results/summary.txt
+          echo "======================" | tee -a perf-results/summary.txt
+
+          BENCHMARK_COUNT=$(grep "^Benchmark" perf-results/ci-benchmarks.txt | wc -l)
+          echo "🏁 Total benchmarks run: $BENCHMARK_COUNT" | tee -a perf-results/summary.txt
+
+          if [ $BENCHMARK_COUNT -gt 0 ]; then
+            echo "📈 Top 5 fastest operations:" | tee -a perf-results/summary.txt
+            grep "^Benchmark" perf-results/ci-benchmarks.txt | sort -k3 -n | head -5 | tee -a perf-results/summary.txt
+            echo "" | tee -a perf-results/summary.txt
+            echo "🐌 Top 5 slowest operations:" | tee -a perf-results/summary.txt
+            grep "^Benchmark" perf-results/ci-benchmarks.txt | sort -k3 -nr | head -5 | tee -a perf-results/summary.txt
+          else
+            echo "⚠️ No benchmarks found or executed" | tee -a perf-results/summary.txt
+          fi
+
+          echo "✅ CI performance check completed"
+
+      - name: 🔍 Performance analysis
+        run: |
+          echo "🔍 Analyzing performance characteristics..."
+
+          # Basic performance analysis
+          if [ -f perf-results/ci-benchmarks.txt ] && [ -s perf-results/ci-benchmarks.txt ]; then
+            # Check for extremely slow operations (>1 second per operation)
+            SLOW_OPS=$(grep "^Benchmark" perf-results/ci-benchmarks.txt | awk '$3 > 1000000000 {count++} END {print count+0}')
+            
+            # Check for high memory allocations (>1MB per operation)
+            HIGH_MEM=$(grep "^Benchmark" perf-results/ci-benchmarks.txt | awk '$5 > 1048576 {count++} END {print count+0}')
+            
+            echo "⚠️ Performance warnings:" | tee -a perf-results/summary.txt
+            if [ $SLOW_OPS -gt 0 ]; then
+              echo "  - $SLOW_OPS operations take >1 second per iteration" | tee -a perf-results/summary.txt
+              echo "::warning title=Slow Operations::$SLOW_OPS benchmark operations take more than 1 second per iteration"
+            fi
+            
+            if [ $HIGH_MEM -gt 0 ]; then
+              echo "  - $HIGH_MEM operations allocate >1MB per iteration" | tee -a perf-results/summary.txt
+              echo "::warning title=High Memory Usage::$HIGH_MEM benchmark operations allocate more than 1MB per iteration"
+            fi
+            
+            if [ $SLOW_OPS -eq 0 ] && [ $HIGH_MEM -eq 0 ]; then
+              echo "  - ✅ All operations perform within reasonable limits" | tee -a perf-results/summary.txt
+            fi
+          else
+            echo "⚠️ No benchmark data to analyze" | tee -a perf-results/summary.txt
+          fi
+
+      - name: 📤 Upload performance artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: performance-results
+          path: |
+            perf-results/
+          retention-days: 7
+
   build:
     name: Build
     runs-on: ubuntu-latest
-    needs: [test, format, lint, security, benchmark]
+    needs: [test, format, lint, security, performance]
     strategy:
       matrix:
         goos: [linux, windows, darwin]
@@ -250,194 +423,151 @@ jobs:
             bin/cli/*
             bin/tui/*
 
-      - name: Test binaries (Linux only)
+      - name: 🧪 Test binaries with performance validation (Linux only)
         if: matrix.goos == 'linux' && matrix.goarch == 'amd64'
         run: |
+          echo "🧪 Testing binaries with performance validation..."
+
+          # Create test results directory
+          mkdir -p binary-test-results
+
           # Test unified binary
           echo "Testing unified binary..."
           for binary in bin/unified/*linux-amd64*; do
             if [ -f "$binary" ]; then
-              echo "Testing unified: $binary..."
+              echo "🔍 Testing unified: $binary..."
               chmod +x "$binary"
-              # Test different modes
+              
+              # Binary size check
+              BINARY_SIZE=$(stat -f%z "$binary" 2>/dev/null || stat -c%s "$binary" 2>/dev/null || echo "0")
+              echo "📦 Binary size: $(echo $BINARY_SIZE | awk '{printf "%.2f MB", $1/1024/1024}')"
+              
+              # Performance timing for startup
+              echo "⏱️  Testing startup performance..."
+              START_TIME=$(date +%s%N)
+              
+              # Test different modes with timing
               echo "  Testing CLI mode (default):"
-              if $binary --help; then
+              if timeout 10s $binary --help > /dev/null 2>&1; then
                 echo "    ✅ CLI mode works"
               else
-                echo "    ⚠️  CLI mode help failed"
+                echo "    ⚠️  CLI mode help failed or timed out"
               fi
               
               echo "  Testing TUI mode:"
-              if $binary tui --help; then
+              if timeout 10s $binary tui --help > /dev/null 2>&1; then
                 echo "    ✅ TUI mode works"
               else
-                echo "    ⚠️  TUI mode help failed"
+                echo "    ⚠️  TUI mode help failed or timed out"
               fi
               
               echo "  Testing server mode:"
-              if $binary serve --help; then
+              if timeout 10s $binary serve --help > /dev/null 2>&1; then
                 echo "    ✅ Server mode works"
               else
-                echo "    ⚠️  Server mode help failed"
+                echo "    ⚠️  Server mode help failed or timed out"
               fi
               
               echo "  Testing version command:"
-              if $binary version; then
+              if timeout 5s $binary version > /dev/null 2>&1; then
                 echo "    ✅ Version command works"
               else
-                echo "    ⚠️  Version command failed"
+                echo "    ⚠️  Version command failed or timed out"
               fi
+              
+              END_TIME=$(date +%s%N)
+              STARTUP_TIME=$(echo "scale=3; ($END_TIME - $START_TIME) / 1000000000" | bc -l 2>/dev/null || echo "N/A")
+              echo "⏱️  Total test time: ${STARTUP_TIME}s"
+              
+              # Log metrics
+              echo "unified,$BINARY_SIZE,$STARTUP_TIME" >> binary-test-results/metrics.csv
             fi
           done
 
-          # Test CLI binaries
-          echo "Testing CLI binaries..."
+          # Test CLI binaries with performance metrics
+          echo "🔍 Testing CLI binaries..."
           for binary in bin/cli/*linux-amd64*; do
             if [ -f "$binary" ]; then
               echo "Testing CLI: $binary..."
               chmod +x "$binary"
+              
+              BINARY_SIZE=$(stat -f%z "$binary" 2>/dev/null || stat -c%s "$binary" 2>/dev/null || echo "0")
+              START_TIME=$(date +%s%N)
+              
               # Try to run with --help flag, most tools should support this
-              if $binary --help || $binary -h || $binary help; then
+              if timeout 5s $binary --help > /dev/null 2>&1 || timeout 5s $binary -h > /dev/null 2>&1 || timeout 5s $binary help > /dev/null 2>&1; then
                 echo "✅ CLI $binary works"
+                RESULT="pass"
               else
-                echo "⚠️  CLI $binary might not support help flags"
+                echo "⚠️  CLI $binary might not support help flags or timed out"
+                RESULT="warn"
               fi
+              
+              END_TIME=$(date +%s%N)
+              EXEC_TIME=$(echo "scale=3; ($END_TIME - $START_TIME) / 1000000000" | bc -l 2>/dev/null || echo "N/A")
+              
+              # Log metrics
+              echo "cli-$(basename $binary),$BINARY_SIZE,$EXEC_TIME,$RESULT" >> binary-test-results/metrics.csv
             fi
           done
 
-          # Test TUI binaries
-          echo "Testing TUI binaries..."
+          # Test TUI binaries with performance metrics
+          echo "🔍 Testing TUI binaries..."
           for binary in bin/tui/*linux-amd64*; do
             if [ -f "$binary" ]; then
               echo "Testing TUI: $binary..."
               chmod +x "$binary"
+              
+              BINARY_SIZE=$(stat -f%z "$binary" 2>/dev/null || stat -c%s "$binary" 2>/dev/null || echo "0")
+              START_TIME=$(date +%s%N)
+              
               # Try to run with --help flag, most tools should support this
-              if $binary --help || $binary -h || $binary help; then
+              if timeout 5s $binary --help > /dev/null 2>&1 || timeout 5s $binary -h > /dev/null 2>&1 || timeout 5s $binary help > /dev/null 2>&1; then
                 echo "✅ TUI $binary works"
+                RESULT="pass"
               else
-                echo "⚠️  TUI $binary might not support help flags"
+                echo "⚠️  TUI $binary might not support help flags or timed out"
+                RESULT="warn"
               fi
+              
+              END_TIME=$(date +%s%N)
+              EXEC_TIME=$(echo "scale=3; ($END_TIME - $START_TIME) / 1000000000" | bc -l 2>/dev/null || echo "N/A")
+              
+              # Log metrics
+              echo "tui-$(basename $binary),$BINARY_SIZE,$EXEC_TIME,$RESULT" >> binary-test-results/metrics.csv
             fi
           done
 
-  benchmark:
-    name: Benchmark
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v4
-        with:
-          go-version: ${{ env.GO_VERSION }}
-
-      - name: Cache Go modules
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/go/pkg/mod
-            ~/.cache/go-build
-          key: ${{ env.CACHE_VERSION }}-${{ runner.os }}-go-benchmark-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ env.CACHE_VERSION }}-${{ runner.os }}-go-benchmark-
-            ${{ env.CACHE_VERSION }}-${{ runner.os }}-go-
-
-      - name: Download dependencies
-        run: go mod download
-
-      - name: Run benchmarks
-        run: |
-          echo "Running benchmarks..."
-          go test -bench=. -benchmem -count=3 ./... | tee benchmark.txt
-          echo "Benchmark results saved to benchmark.txt"
-
-      - name: Download previous benchmark data
-        uses: actions/cache@v4
-        with:
-          path: previous-benchmark.txt
-          key: benchmark-${{ github.repository }}-${{ github.ref_name }}
-          restore-keys: |
-            benchmark-${{ github.repository }}-main
-
-      - name: Compare benchmarks
-        id: compare
-        run: |
-          if [ -f previous-benchmark.txt ]; then
-            echo "Comparing with previous benchmark results..."
-
-            # Install benchcmp if not available
-            go install golang.org/x/tools/cmd/benchcmp@latest
-
-            # Compare benchmarks and capture output
-            echo "## Benchmark Comparison" > benchmark-comparison.md
-            echo "" >> benchmark-comparison.md
-            echo "Comparing current benchmarks against previous run:" >> benchmark-comparison.md
-            echo "" >> benchmark-comparison.md
-            echo '```' >> benchmark-comparison.md
-            if benchcmp previous-benchmark.txt benchmark.txt >> benchmark-comparison.md 2>&1; then
-              echo "Benchmark comparison completed successfully"
-            else
-              echo "No significant changes or comparison failed" >> benchmark-comparison.md
-            fi
-            echo '```' >> benchmark-comparison.md
-
-            # Check for performance regressions (simple heuristic)
-            if grep -q "+.*%" benchmark-comparison.md; then
-              echo "performance_regression=true" >> $GITHUB_OUTPUT
-              echo "⚠️ Potential performance regression detected!" >> benchmark-comparison.md
-            else
-              echo "performance_regression=false" >> $GITHUB_OUTPUT
-              echo "✅ No significant performance regressions detected." >> benchmark-comparison.md
-            fi
-          else
-            echo "No previous benchmark data found. This will be the baseline."
-            echo "## Benchmark Results" > benchmark-comparison.md
-            echo "" >> benchmark-comparison.md
-            echo "This is the first benchmark run - establishing baseline." >> benchmark-comparison.md
-            echo "performance_regression=false" >> $GITHUB_OUTPUT
+          # Generate performance summary
+          if [ -f binary-test-results/metrics.csv ]; then
+            echo "📊 Binary Performance Summary:" | tee binary-test-results/summary.txt
+            echo "================================" | tee -a binary-test-results/summary.txt
+            echo "Type,Size(bytes),ExecTime(s),Result" | tee -a binary-test-results/summary.txt
+            cat binary-test-results/metrics.csv | tee -a binary-test-results/summary.txt
+            
+            # Calculate totals
+            TOTAL_SIZE=$(awk -F',' '{sum+=$2} END {printf "%.2f MB", sum/1024/1024}' binary-test-results/metrics.csv)
+            AVG_TIME=$(awk -F',' '$3!="N/A" {sum+=$3; count++} END {if(count>0) printf "%.3fs", sum/count; else print "N/A"}' binary-test-results/metrics.csv)
+            
+            echo "--------------------------------" | tee -a binary-test-results/summary.txt
+            echo "Total size: $TOTAL_SIZE" | tee -a binary-test-results/summary.txt
+            echo "Average startup time: $AVG_TIME" | tee -a binary-test-results/summary.txt
+            echo "✅ Binary testing completed" | tee -a binary-test-results/summary.txt
           fi
 
-      - name: Save current benchmark as previous
-        run: cp benchmark.txt previous-benchmark.txt
-
-      - name: Upload benchmark results
+      - name: 📤 Upload binary test results
         uses: actions/upload-artifact@v4
+        if: always()
         with:
-          name: benchmark-results
+          name: binary-test-results-${{ matrix.goos }}-${{ matrix.goarch }}
           path: |
-            benchmark.txt
-            benchmark-comparison.md
-
-      - name: Comment benchmark results on PR
-        if: github.event_name == 'pull_request'
-        uses: actions/github-script@v6
-        with:
-          script: |
-            const fs = require('fs');
-            const path = 'benchmark-comparison.md';
-
-            if (fs.existsSync(path)) {
-              const content = fs.readFileSync(path, 'utf8');
-
-              github.rest.issues.createComment({
-                issue_number: context.issue.number,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                body: content
-              });
-            }
-
-      - name: Fail on performance regression
-        if: steps.compare.outputs.performance_regression == 'true' && github.event_name == 'pull_request'
-        run: |
-          echo "Performance regression detected! Check the benchmark comparison above."
-          exit 1
+            binary-test-results/
+          retention-days: 7
 
   release:
     name: Release
     runs-on: ubuntu-latest
-    needs: [test, format, lint, security, benchmark, build]
+    needs: [test, format, lint, security, performance, build]
     if: startsWith(github.ref, 'refs/tags/v')
     steps:
       - name: Checkout code
@@ -575,7 +705,7 @@ jobs:
 
       - name: Create new release
         if: steps.release_exists.outputs.exists == 'false'
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2.3.3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:

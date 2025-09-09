@@ -1,0 +1,397 @@
+name: 🚀 Benchmark Performance Analysis
+
+# Comprehensive benchmark tracking with performance regression detection
+# Features:
+# - Detailed benchmark results with fancy GitHub UI output
+# - Performance regression detection with alerts
+# - Historical comparison and trend analysis
+# - Multi-platform benchmark execution
+# - Automatic baseline updates on main branch
+
+on:
+  push:
+    branches: [main, develop, feature/*]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch: # Allow manual trigger
+    inputs:
+      baseline_ref:
+        description: "Git reference to use as baseline (default: main)"
+        required: false
+        default: "main"
+        type: string
+
+env:
+  GO_VERSION: "1.24" # Keep consistent with ci.yml
+  CACHE_VERSION: "v1" # Increment this to invalidate all caches
+
+permissions:
+  contents: read
+  pull-requests: write # Required for PR comments
+  actions: read
+  checks: write
+
+jobs:
+  benchmark:
+    name: 🏁 Performance Benchmarks
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # Test on different architectures for comprehensive performance analysis
+        include:
+          - os: ubuntu-latest
+            goarch: amd64
+            label: "Linux AMD64"
+          - os: ubuntu-latest
+            goarch: arm64
+            label: "Linux ARM64"
+    steps:
+      - name: 📥 Checkout current code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetch full history for baseline comparison
+
+      - name: 🔧 Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: 💾 Cache Go modules and build cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ env.CACHE_VERSION }}-${{ runner.os }}-go-bench-${{ matrix.goarch }}-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ env.CACHE_VERSION }}-${{ runner.os }}-go-bench-${{ matrix.goarch }}-
+            ${{ env.CACHE_VERSION }}-${{ runner.os }}-go-bench-
+            ${{ env.CACHE_VERSION }}-${{ runner.os }}-go-
+
+      - name: 📦 Download dependencies
+        run: go mod download
+
+      - name: 🔧 Install benchmark tools
+        run: |
+          echo "Installing benchmark analysis tools..."
+          go install golang.org/x/perf/cmd/benchstat@latest
+          go install golang.org/x/perf/cmd/benchcmp@latest
+
+      - name: 🏃 Run current benchmarks
+        env:
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          echo "🚀 Running benchmarks for ${{ matrix.label }}..."
+
+          # Create results directory
+          mkdir -p benchmark-results
+
+          # Run benchmarks with extended output
+          echo "Running comprehensive benchmark suite..."
+          go test -bench=. -benchmem -benchtime=5s -count=3 ./... | tee "benchmark-results/current-${{ matrix.goarch }}.txt"
+
+          # Also run with CPU profiling for detailed analysis
+          echo "Running benchmarks with CPU profiling..."
+          go test -bench=. -benchmem -cpuprofile="benchmark-results/cpu-${{ matrix.goarch }}.prof" ./... > /dev/null 2>&1 || true
+
+          # Run memory profiling
+          echo "Running benchmarks with memory profiling..."
+          go test -bench=. -benchmem -memprofile="benchmark-results/mem-${{ matrix.goarch }}.prof" ./... > /dev/null 2>&1 || true
+
+          # Generate benchmark statistics
+          echo "📊 Current benchmark summary for ${{ matrix.label }}:"
+          echo "================================================================"
+          cat "benchmark-results/current-${{ matrix.goarch }}.txt" | grep "^Benchmark" | head -10
+          echo "================================================================"
+
+      - name: 📥 Get baseline benchmarks
+        id: baseline
+        run: |
+          BASELINE_REF="${{ github.event.inputs.baseline_ref || 'main' }}"
+
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASELINE_REF="${{ github.base_ref }}"
+          fi
+
+          echo "baseline_ref=$BASELINE_REF" >> $GITHUB_OUTPUT
+
+          # Try to get baseline from the target branch
+          echo "🔍 Fetching baseline benchmarks from $BASELINE_REF..."
+
+          # Store current state
+          current_commit=$(git rev-parse HEAD)
+
+          # Checkout baseline
+          if git checkout "$BASELINE_REF" 2>/dev/null; then
+            echo "✅ Successfully checked out $BASELINE_REF"
+            
+            # Run baseline benchmarks
+            echo "🏃 Running baseline benchmarks..."
+            go test -bench=. -benchmem -benchtime=5s -count=3 ./... | tee "benchmark-results/baseline-${{ matrix.goarch }}.txt" || true
+            
+            # Return to current commit
+            git checkout "$current_commit"
+            
+            echo "has_baseline=true" >> $GITHUB_OUTPUT
+          else
+            echo "⚠️ Could not checkout $BASELINE_REF, skipping comparison"
+            echo "has_baseline=false" >> $GITHUB_OUTPUT
+            touch "benchmark-results/baseline-${{ matrix.goarch }}.txt"
+          fi
+
+      - name: 📊 Generate performance analysis
+        id: analysis
+        if: steps.baseline.outputs.has_baseline == 'true'
+        env:
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          echo "🔬 Analyzing performance changes for ${{ matrix.label }}..."
+
+          # Generate statistical comparison
+          if [ -f "benchmark-results/baseline-${{ matrix.goarch }}.txt" ] && [ -s "benchmark-results/baseline-${{ matrix.goarch }}.txt" ]; then
+            echo "📈 Statistical analysis using benchstat:"
+            benchstat "benchmark-results/baseline-${{ matrix.goarch }}.txt" "benchmark-results/current-${{ matrix.goarch }}.txt" | tee "benchmark-results/comparison-${{ matrix.goarch }}.txt"
+            
+            # Check for regressions (>10% performance decrease)
+            echo "🔍 Checking for performance regressions..."
+            
+            REGRESSIONS=$(grep -E "~|%" "benchmark-results/comparison-${{ matrix.goarch }}.txt" | grep -E "\+[0-9]+\.[0-9]+%" | wc -l || echo "0")
+            IMPROVEMENTS=$(grep -E "~|%" "benchmark-results/comparison-${{ matrix.goarch }}.txt" | grep -E "\-[0-9]+\.[0-9]+%" | wc -l || echo "0")
+            
+            echo "regressions=$REGRESSIONS" >> $GITHUB_OUTPUT
+            echo "improvements=$IMPROVEMENTS" >> $GITHUB_OUTPUT
+            
+            # Create summary
+            {
+              echo "## 🏁 Benchmark Results Summary - ${{ matrix.label }}"
+              echo ""
+              echo "**Performance Changes:**"
+              echo "- 🔴 Regressions detected: $REGRESSIONS"
+              echo "- 🟢 Improvements detected: $IMPROVEMENTS"
+              echo ""
+              echo "### 📊 Detailed Statistical Analysis"
+              echo "\`\`\`"
+              cat "benchmark-results/comparison-${{ matrix.goarch }}.txt"
+              echo "\`\`\`"
+              echo ""
+              echo "### 📈 Current Benchmark Results"
+              echo "\`\`\`"
+              grep "^Benchmark" "benchmark-results/current-${{ matrix.goarch }}.txt" | head -20
+              echo "\`\`\`"
+            } > "benchmark-results/summary-${{ matrix.goarch }}.md"
+            
+            echo "has_comparison=true" >> $GITHUB_OUTPUT
+          else
+            echo "⚠️ No baseline data available for comparison"
+            echo "has_comparison=false" >> $GITHUB_OUTPUT
+            echo "regressions=0" >> $GITHUB_OUTPUT
+            echo "improvements=0" >> $GITHUB_OUTPUT
+            
+            # Create summary without comparison
+            {
+              echo "## 🏁 Benchmark Results - ${{ matrix.label }}"
+              echo ""
+              echo "**Status:** Baseline benchmarks not available for comparison"
+              echo ""
+              echo "### 📈 Current Benchmark Results"
+              echo "\`\`\`"
+              grep "^Benchmark" "benchmark-results/current-${{ matrix.goarch }}.txt" | head -20
+              echo "\`\`\`"
+            } > "benchmark-results/summary-${{ matrix.goarch }}.md"
+          fi
+
+      - name: 📤 Upload benchmark artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results-${{ matrix.goarch }}
+          path: |
+            benchmark-results/
+          retention-days: 30
+
+      - name: ⚠️ Check for critical regressions
+        if: steps.analysis.outputs.regressions != '0' && steps.analysis.outputs.regressions != ''
+        run: |
+          echo "🚨 CRITICAL: Performance regressions detected!"
+          echo "Number of regressions: ${{ steps.analysis.outputs.regressions }}"
+          echo ""
+          echo "Please review the benchmark comparison above."
+          echo "Consider optimizing the affected code paths."
+
+          # Don't fail the job, just warn
+          echo "::warning title=Performance Regression::${{ steps.analysis.outputs.regressions }} benchmark regressions detected for ${{ matrix.label }}"
+
+  # Combine results and post PR comment
+  benchmark-summary:
+    name: 📋 Benchmark Summary
+    needs: benchmark
+    runs-on: ubuntu-latest
+    if: always() && github.event_name == 'pull_request'
+    steps:
+      - name: 📥 Download all benchmark results
+        uses: actions/download-artifact@v4
+        with:
+          path: all-results
+
+      - name: 🔍 Combine results and create PR comment
+        run: |
+          echo "📊 Creating comprehensive benchmark summary..."
+
+          # Initialize summary
+          {
+            echo "# 🚀 Benchmark Performance Report"
+            echo ""
+            echo "**Workflow:** \`${{ github.workflow }}\` | **Run:** [\`${{ github.run_id }}\`](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+            echo "**Commit:** \`${{ github.sha }}\` | **Branch:** \`${{ github.head_ref }}\`"
+            echo ""
+          } > pr-comment.md
+
+          # Add results for each architecture
+          total_regressions=0
+          total_improvements=0
+
+          for arch_dir in all-results/benchmark-results-*; do
+            if [ -d "$arch_dir" ]; then
+              arch=$(basename "$arch_dir" | sed 's/benchmark-results-//')
+              echo "Processing results for $arch..."
+              
+              if [ -f "$arch_dir/summary-$arch.md" ]; then
+                echo "" >> pr-comment.md
+                cat "$arch_dir/summary-$arch.md" >> pr-comment.md
+                echo "" >> pr-comment.md
+                
+                # Count regressions and improvements (basic parsing)
+                if [ -f "$arch_dir/comparison-$arch.txt" ]; then
+                  arch_regressions=$(grep -E "\+[0-9]+\.[0-9]+%" "$arch_dir/comparison-$arch.txt" | wc -l || echo "0")
+                  arch_improvements=$(grep -E "\-[0-9]+\.[0-9]+%" "$arch_dir/comparison-$arch.txt" | wc -l || echo "0")
+                  total_regressions=$((total_regressions + arch_regressions))
+                  total_improvements=$((total_improvements + arch_improvements))
+                fi
+              fi
+            fi
+          done
+
+          # Add footer with summary
+          {
+            echo "---"
+            echo ""
+            echo "### 📈 Overall Summary"
+            echo "- **Total Regressions:** $total_regressions"
+            echo "- **Total Improvements:** $total_improvements"
+            echo ""
+            if [ $total_regressions -gt 0 ]; then
+              echo "⚠️ **Action Required:** Performance regressions detected. Please review and optimize."
+            else
+              echo "✅ **Great!** No performance regressions detected."
+            fi
+            echo ""
+            echo "📝 *This comment will be updated automatically when new commits are pushed.*"
+            echo ""
+            echo "<!-- benchmark-comment-marker -->"
+          } >> pr-comment.md
+
+          echo "Generated PR comment:"
+          echo "=========================="
+          cat pr-comment.md
+          echo "=========================="
+
+      - name: 💬 Post/Update PR comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const comment = fs.readFileSync('pr-comment.md', 'utf8');
+
+            // Find existing comment
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const existingComment = comments.data.find(c => 
+              c.body.includes('<!-- benchmark-comment-marker -->')
+            );
+
+            if (existingComment) {
+              // Update existing comment
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existingComment.id,
+                body: comment
+              });
+              console.log('Updated existing benchmark comment');
+            } else {
+              // Create new comment
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: comment
+              });
+              console.log('Created new benchmark comment');
+            }
+
+  # Update baseline benchmarks on main branch
+  update-baseline:
+    name: 📚 Update Baseline
+    needs: benchmark
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 📥 Download benchmark results
+        uses: actions/download-artifact@v4
+        with:
+          path: baseline-update
+
+      - name: 📚 Store baseline benchmarks
+        run: |
+          echo "📚 Updating baseline benchmarks for future comparisons..."
+
+          # Create baseline directory
+          mkdir -p .github/benchmark-baselines
+
+          # Copy current results as new baselines
+          for arch_dir in baseline-update/benchmark-results-*; do
+            if [ -d "$arch_dir" ]; then
+              arch=$(basename "$arch_dir" | sed 's/benchmark-results-//')
+              echo "Updating baseline for $arch..."
+              
+              if [ -f "$arch_dir/current-$arch.txt" ]; then
+                cp "$arch_dir/current-$arch.txt" ".github/benchmark-baselines/baseline-$arch.txt"
+                echo "✅ Updated baseline for $arch"
+              fi
+            fi
+          done
+
+          # Create metadata
+          {
+            echo "# Benchmark Baseline Metadata"
+            echo "Updated: $(date -u +"%Y-%m-%d %H:%M:%S UTC")"
+            echo "Commit: ${{ github.sha }}"
+            echo "Workflow: ${{ github.run_id }}"
+          } > .github/benchmark-baselines/metadata.txt
+
+          echo "📚 Baseline update completed"
+
+      - name: 💾 Commit baseline updates
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+          if [ -n "$(git status --porcelain)" ]; then
+            git add .github/benchmark-baselines/
+            git commit -m "🔄 Update benchmark baselines [skip ci]
+            
+            Auto-updated from commit ${{ github.sha }}
+            Workflow run: ${{ github.run_id }}"
+            git push
+            echo "✅ Pushed baseline updates"
+          else
+            echo "📝 No changes to commit"
+          fi

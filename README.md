@@ -1,10 +1,12 @@
 # Go Toolbox
 
 [![CI](https://github.com/Velvet-Labs-LLC/go-toolbox/actions/workflows/ci.yml/badge.svg)](https://github.com/Velvet-Labs-LLC/go-toolbox/actions/workflows/ci.yml)
+[![🚀 Benchmarks](https://github.com/Velvet-Labs-LLC/go-toolbox/actions/workflows/benchmark.yml/badge.svg)](https://github.com/Velvet-Labs-LLC/go-toolbox/actions/workflows/benchmark.yml)
 [![Go Version](https://img.shields.io/badge/go-1.24+-blue)](https://golang.org/)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Coverage](https://img.shields.io/badge/coverage-20.0%25-yellow)](https://github.com/Velvet-Labs-LLC/go-toolbox/actions)
 [![Security](https://img.shields.io/badge/gosec-passing-brightgreen)](https://github.com/Velvet-Labs-LLC/go-toolbox/actions)
+[![Performance](https://img.shields.io/badge/performance-monitored-blue)](https://github.com/Velvet-Labs-LLC/go-toolbox/actions/workflows/benchmark.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/Velvet-Labs-LLC/go-toolbox)](https://goreportcard.com/report/github.com/Velvet-Labs-LLC/go-toolbox)
 
 A comprehensive collection of CLI, TUI, and utility tools written in Go with modern development practices.
@@ -44,6 +46,7 @@ make build
 | **Build** | ![Passing](https://img.shields.io/badge/status-passing-brightgreen) |
 | **Tests** | ![Coverage 20%](https://img.shields.io/badge/coverage-20.0%25-yellow) |
 | **Security** | ![Gosec Clean](https://img.shields.io/badge/gosec-clean-brightgreen) |
+| **Performance** | ![Benchmarks Tracked](https://img.shields.io/badge/benchmarks-tracked-blue) |
 | **Linting** | ![golangci-lint v2.4](https://img.shields.io/badge/golangci--lint-v2.4-blue) |
 | **Go Version** | ![1.24+](https://img.shields.io/badge/go-1.24+-blue) |
 | **Platforms** | ![Multi-platform](https://img.shields.io/badge/platforms-linux%20%7C%20windows%20%7C%20darwin-lightgrey) |

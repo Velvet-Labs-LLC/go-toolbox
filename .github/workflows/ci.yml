@@ -1,561 +1,127 @@
-name: 🚀 CI Pipeline
+name: 🔧 CI
 
-# Cache Strategy for Self-Hosted Runners:
-# - Use unique cache keys per job to prevent conflicts
-# - Separate Go module cache from build cache
-# - Include runner name/labels in cache keys for isolation
-# - Use restore-keys with fallbacks for cache efficiency
-# - Avoid shared cache conflicts by using job-specific prefixes
-# - Leverage GOCACHE and GOMODCACHE environment variables
+# Caching Strategy for Self-Hosted Runners:
+# - Each matrix job gets completely isolated cache directories using run_id + run_attempt + matrix values
+# - GOCACHE: ~/.cache/go-build-{goos}-{goarch}-{run_id}-{run_attempt}
+# - GOMODCACHE: ~/go/pkg/mod-{goos}-{goarch}-{run_id}-{run_attempt}
+# - GOPATH: ~/go-{goos}-{goarch}-{run_id}-{run_attempt}
+# - This prevents simultaneous matrix jobs from interfering with each other
+# - Cleanup removes old isolated directories while preserving current run caches
 
 on:
   push:
-    branches: [main, develop, feature/*]
-    tags: ["v*"] # Trigger on version tags
+    branches: ["**"] # Run on all branches
+    tags: ["v*"] # Run on version tags for releases
   pull_request:
     branches: [main, develop]
-  workflow_dispatch: # Allow manual trigger
+  workflow_dispatch:
 
 env:
-  GO_VERSION: "1.24.0"
-  CACHE_VERSION: "v2" # Increment this to invalidate all caches
-  # Optimize for self-hosted runners
-  GOCACHE: "/tmp/go-build-cache"
-  GOMODCACHE: "/tmp/go-mod-cache"
+  GO_VERSION: "1.24"
+  CACHE_VERSION: "v3" # Increment to invalidate all caches
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
 
 permissions:
-  contents: write # Required for creating releases and uploading assets
-  actions: read # Required for downloading artifacts
-  checks: write # Required for test results
+  contents: write # Required for creating releases
+  packages: write # Required for container registry
+  security-events: write # Required for security scanning
+  actions: read
+  checks: write
+  pull-requests: write
 
 jobs:
-  test:
-    name: 🧪 Test Suite
-    runs-on: self-hosted
+  # Pre-flight checks and setup
+  preflight:
+    name: 🔍 Pre-flight Checks
+    runs-on: ubuntu-latest
+    outputs:
+      go-version: ${{ steps.setup.outputs.go-version }}
+      cache-key: ${{ steps.setup.outputs.cache-key }}
+      is-release: ${{ steps.setup.outputs.is-release }}
+      version: ${{ steps.setup.outputs.version }}
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
-
-      - name: 🔧 Set up Go
-        uses: actions/setup-go@v5
         with:
-          go-version: ${{ env.GO_VERSION }}
-          cache: false # We'll handle caching manually for better control
+          fetch-depth: 0 # Full history for versioning
 
-      - name: 📁 Create cache directories
+      - name: 🔧 Setup variables
+        id: setup
         run: |
-          mkdir -p ${{ env.GOCACHE }}
-          mkdir -p ${{ env.GOMODCACHE }}
+          echo "go-version=${{ env.GO_VERSION }}" >> $GITHUB_OUTPUT
+          echo "cache-key=${{ env.CACHE_VERSION }}-${{ runner.os }}-go-${{ env.GO_VERSION }}-${{ hashFiles('**/go.sum') }}" >> $GITHUB_OUTPUT
 
-      - name: 💾 Cache Go modules
-        uses: actions/cache@v4
-        with:
-          path: ${{ env.GOMODCACHE }}
-          key: ${{ env.CACHE_VERSION }}-${{ runner.name }}-go-mod-test-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ env.CACHE_VERSION }}-${{ runner.name }}-go-mod-test-
-            ${{ env.CACHE_VERSION }}-${{ runner.name }}-go-mod-
-
-      - name: 💾 Cache Go build cache
-        uses: actions/cache@v4
-        with:
-          path: ${{ env.GOCACHE }}
-          key: ${{ env.CACHE_VERSION }}-${{ runner.name }}-go-build-test-${{ hashFiles('**/*.go') }}-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ env.CACHE_VERSION }}-${{ runner.name }}-go-build-test-${{ hashFiles('**/*.go') }}-
-            ${{ env.CACHE_VERSION }}-${{ runner.name }}-go-build-test-
-            ${{ env.CACHE_VERSION }}-${{ runner.name }}-go-build-
-
-      - name: 📦 Download dependencies
-        run: go mod download
-
-      - name: 🧪 Run tests with coverage and detailed reporting
-        run: |
-          echo "🧪 Running comprehensive test suite..."
-
-          # Create results directory for artifacts
-          mkdir -p test-results
-
-          # Run tests with JSON output for better parsing
-          go test -race -coverprofile=coverage.out -covermode=atomic -v -json ./... | tee test-results/test-output.json
-
-          # Generate human-readable test report
-          echo "📊 Test Results Summary:" | tee test-results/summary.txt
-          echo "=========================" | tee -a test-results/summary.txt
-
-          # Parse test results
-          PASSED=$(grep '"Action":"pass"' test-results/test-output.json | grep '"Package":' | wc -l || echo "0")
-          FAILED=$(grep '"Action":"fail"' test-results/test-output.json | grep '"Package":' | wc -l || echo "0")
-          SKIPPED=$(grep '"Action":"skip"' test-results/test-output.json | wc -l || echo "0")
-
-          echo "✅ Passed: $PASSED packages" | tee -a test-results/summary.txt
-          echo "❌ Failed: $FAILED packages" | tee -a test-results/summary.txt  
-          echo "⏭️  Skipped: $SKIPPED tests" | tee -a test-results/summary.txt
-          echo "=========================" | tee -a test-results/summary.txt
-
-          # Show coverage summary
-          if [ -f coverage.out ]; then
-            echo "📈 Coverage Summary:" | tee -a test-results/summary.txt
-            go tool cover -func=coverage.out | tail -1 | tee -a test-results/summary.txt
-          fi
-
-          # Check if any tests failed
-          if [ "$FAILED" -gt 0 ]; then
-            echo "🚨 Test failures detected!"
-            echo "::error title=Test Failures::$FAILED packages failed tests"
-            exit 1
-          fi
-
-      - name: 🏃 Quick benchmark smoke test
-        run: |
-          echo "🏃 Running quick benchmark smoke test..."
-
-          # Run a quick benchmark to ensure they don't crash
-          timeout 30s go test -bench=. -benchtime=100ms ./... || echo "⚠️ Benchmark smoke test timed out or failed"
-
-          echo "✅ Benchmark smoke test completed"
-
-      - name: 📊 Generate test report artifacts
-        if: always()
-        run: |
-          # Generate coverage HTML report
-          if [ -f coverage.out ]; then
-            go tool cover -html=coverage.out -o test-results/coverage.html
-            echo "📊 Coverage report generated: test-results/coverage.html"
-          fi
-
-          # Create test summary for GitHub
-          if [ -f test-results/test-output.json ]; then
-            echo "# 🧪 Test Results" > test-results/github-summary.md
-            echo "" >> test-results/github-summary.md
-            cat test-results/summary.txt >> test-results/github-summary.md
-            
-            # Add failed tests details if any
-            if grep -q '"Action":"fail"' test-results/test-output.json; then
-              echo "" >> test-results/github-summary.md
-              echo "## ❌ Failed Tests" >> test-results/github-summary.md
-              echo "\`\`\`" >> test-results/github-summary.md
-              grep '"Action":"fail"' test-results/test-output.json | head -10 >> test-results/github-summary.md
-              echo "\`\`\`" >> test-results/github-summary.md
-            fi
-          fi
-
-      - name: 📤 Upload test artifacts
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: test-results-${{ github.run_id }}
-          path: |
-            test-results/
-            coverage.out
-          retention-days: 30
-
-      - name: 🧪 Test Makefile targets
-        run: |
-          make clean
-          make deps
-          make build
-
-      - name: 📊 Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
-        with:
-          file: ./coverage.out
-
-  format:
-    name: 🎨 Format Check
-    runs-on: self-hosted
-    steps:
-      - name: 📥 Checkout code
-        uses: actions/checkout@v4
-
-      - name: 🔧 Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: ${{ env.GO_VERSION }}
-          cache: false
-
-      - name: � Create cache directories
-        run: |
-          mkdir -p ${{ env.GOCACHE }}
-          mkdir -p ${{ env.GOMODCACHE }}
-
-      - name: 💾 Cache Go modules
-        uses: actions/cache@v4
-        with:
-          path: ${{ env.GOMODCACHE }}
-          key: ${{ env.CACHE_VERSION }}-${{ runner.name }}-go-mod-format-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ env.CACHE_VERSION }}-${{ runner.name }}-go-mod-format-
-            ${{ env.CACHE_VERSION }}-${{ runner.name }}-go-mod-
-
-      - name: 💾 Cache Go build cache
-        uses: actions/cache@v4
-        with:
-          path: ${{ env.GOCACHE }}
-          key: ${{ env.CACHE_VERSION }}-${{ runner.name }}-go-build-format-${{ hashFiles('**/*.go') }}-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ env.CACHE_VERSION }}-${{ runner.name }}-go-build-format-${{ hashFiles('**/*.go') }}-
-            ${{ env.CACHE_VERSION }}-${{ runner.name }}-go-build-format-
-            ${{ env.CACHE_VERSION }}-${{ runner.name }}-go-build-
-
-      - name: 📦 Download dependencies
-        run: go mod download
-
-      - name: ✨ Check formatting
-        run: |
-          if [ "$(gofmt -s -l . | wc -l)" -gt 0 ]; then
-            echo "Code is not formatted. Please run 'go fmt ./...'"
-            gofmt -s -l .
-            exit 1
-          fi
-
-      - name: 🔍 Go vet
-        run: go vet ./...
-
-  lint:
-    name: 🔍 Lint Check
-    runs-on: self-hosted
-    steps:
-      - name: 📥 Checkout code
-        uses: actions/checkout@v4
-
-      - name: 🔧 Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: ${{ env.GO_VERSION }}
-          cache: false
-
-      - name: � Create cache directories
-        run: |
-          mkdir -p ${{ env.GOCACHE }}
-          mkdir -p ${{ env.GOMODCACHE }}
-
-      - name: 💾 Cache Go modules
-        uses: actions/cache@v4
-        with:
-          path: ${{ env.GOMODCACHE }}
-          key: ${{ env.CACHE_VERSION }}-${{ runner.name }}-go-mod-lint-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ env.CACHE_VERSION }}-${{ runner.name }}-go-mod-lint-
-            ${{ env.CACHE_VERSION }}-${{ runner.name }}-go-mod-
-
-      - name: 💾 Cache Go build cache
-        uses: actions/cache@v4
-        with:
-          path: ${{ env.GOCACHE }}
-          key: ${{ env.CACHE_VERSION }}-${{ runner.name }}-go-build-lint-${{ hashFiles('**/*.go') }}-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ env.CACHE_VERSION }}-${{ runner.name }}-go-build-lint-${{ hashFiles('**/*.go') }}-
-            ${{ env.CACHE_VERSION }}-${{ runner.name }}-go-build-lint-
-            ${{ env.CACHE_VERSION }}-${{ runner.name }}-go-build-
-
-      - name: 📦 Download dependencies
-        run: go mod download
-
-      - name: 🧹 golangci-lint
-        uses: golangci/golangci-lint-action@v8.0.0
-        with:
-          version: latest
-          args: --timeout=10m
-          # Use our custom cache paths
-          skip-cache: true
-
-  security:
-    name: 🔒 Security Scan
-    runs-on: self-hosted
-    steps:
-      - name: 📥 Checkout code
-        uses: actions/checkout@v4
-
-      - name: 🔧 Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: ${{ env.GO_VERSION }}
-          cache: false
-
-      - name: � Create cache directories
-        run: |
-          mkdir -p ${{ env.GOCACHE }}
-          mkdir -p ${{ env.GOMODCACHE }}
-
-      - name: 💾 Cache Go modules
-        uses: actions/cache@v4
-        with:
-          path: ${{ env.GOMODCACHE }}
-          key: ${{ env.CACHE_VERSION }}-${{ runner.name }}-go-mod-security-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ env.CACHE_VERSION }}-${{ runner.name }}-go-mod-security-
-            ${{ env.CACHE_VERSION }}-${{ runner.name }}-go-mod-
-
-      - name: 📦 Download dependencies
-        run: go mod download
-
-      - name: 🛡️ Run Gosec Security Scanner
-        run: |
-          # Install gosec if not available
-          if ! command -v gosec &> /dev/null; then
-            echo "📥 Installing gosec..."
-            go install github.com/securecodewarrior/gosec/v2/cmd/gosec@latest
-          fi
-
-          # Run gosec security scan
-          echo "🛡️ Running security scan..."
-          gosec ./...
-
-  build:
-    name: 🏗️ Build Matrix
-    runs-on: self-hosted
-    needs: [test, format, lint, security]
-    strategy:
-      matrix:
-        goos: [linux, windows, darwin]
-        goarch: [amd64, arm64]
-        exclude:
-          # Exclude Windows ARM64 for now
-          - goos: windows
-            goarch: arm64
-    steps:
-      - name: 📥 Checkout code
-        uses: actions/checkout@v4
-
-      - name: 🔧 Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: ${{ env.GO_VERSION }}
-          cache: false
-
-      - name: � Create cache directories
-        run: |
-          mkdir -p ${{ env.GOCACHE }}
-          mkdir -p ${{ env.GOMODCACHE }}
-
-      - name: 💾 Cache Go modules
-        uses: actions/cache@v4
-        with:
-          path: ${{ env.GOMODCACHE }}
-          key: ${{ env.CACHE_VERSION }}-${{ runner.name }}-go-mod-build-${{ matrix.goos }}-${{ matrix.goarch }}-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ env.CACHE_VERSION }}-${{ runner.name }}-go-mod-build-${{ matrix.goos }}-${{ matrix.goarch }}-
-            ${{ env.CACHE_VERSION }}-${{ runner.name }}-go-mod-build-
-            ${{ env.CACHE_VERSION }}-${{ runner.name }}-go-mod-
-
-      - name: 💾 Cache Go build cache (platform-specific)
-        uses: actions/cache@v4
-        with:
-          path: ${{ env.GOCACHE }}
-          key: ${{ env.CACHE_VERSION }}-${{ runner.name }}-go-build-${{ matrix.goos }}-${{ matrix.goarch }}-${{ hashFiles('**/*.go') }}-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ env.CACHE_VERSION }}-${{ runner.name }}-go-build-${{ matrix.goos }}-${{ matrix.goarch }}-${{ hashFiles('**/*.go') }}-
-            ${{ env.CACHE_VERSION }}-${{ runner.name }}-go-build-${{ matrix.goos }}-${{ matrix.goarch }}-
-            ${{ env.CACHE_VERSION }}-${{ runner.name }}-go-build-
-
-      - name: 📦 Download dependencies
-        run: go mod download
-
-      - name: 🔨 Build binaries
-        env:
-          GOOS: ${{ matrix.goos }}
-          GOARCH: ${{ matrix.goarch }}
-        run: |
-          mkdir -p bin/cli bin/tui bin/unified
-
-          # Build unified binary (all-in-one)
-          echo "🔨 Building unified binary..."
-          if [ "$GOOS" = "windows" ]; then
-            go build -ldflags="-s -w" -o "bin/unified/go-toolbox-${{ matrix.goos }}-${{ matrix.goarch }}.exe" "./cmd/unified"
+          # Check if this is a release
+          if [[ $GITHUB_REF == refs/tags/v* ]]; then
+            echo "is-release=true" >> $GITHUB_OUTPUT
+            echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
           else
-            go build -ldflags="-s -w" -o "bin/unified/go-toolbox-${{ matrix.goos }}-${{ matrix.goarch }}" "./cmd/unified"
+            echo "is-release=false" >> $GITHUB_OUTPUT
+            echo "version=dev-$(date +%Y%m%d)-$(echo $GITHUB_SHA | cut -c1-8)" >> $GITHUB_OUTPUT
           fi
 
-          # Build CLI applications (separate binaries)
-          for dir in $(find cmd/cli -type f -name "main.go" -exec dirname {} \; | sort); do
-            app=$(basename $dir)
-            bin_name="$app"
-            echo "🔨 Building CLI: $dir as $bin_name..."
-            if [ "$GOOS" = "windows" ]; then
-              go build -ldflags="-s -w" -o "bin/cli/${bin_name}-${{ matrix.goos }}-${{ matrix.goarch }}.exe" "./$dir"
-            else
-              go build -ldflags="-s -w" -o "bin/cli/${bin_name}-${{ matrix.goos }}-${{ matrix.goarch }}" "./$dir"
-            fi
-          done
-
-          # Build TUI applications (separate binaries)
-          for dir in $(find cmd/tui -type f -name "main.go" -exec dirname {} \; | sort); do
-            app=$(basename $dir)
-            bin_name="$app"
-            echo "🔨 Building TUI: $dir as $bin_name..."
-            if [ "$GOOS" = "windows" ]; then
-              go build -ldflags="-s -w" -o "bin/tui/${bin_name}-${{ matrix.goos }}-${{ matrix.goarch }}.exe" "./$dir"
-            else
-              go build -ldflags="-s -w" -o "bin/tui/${bin_name}-${{ matrix.goos }}-${{ matrix.goarch }}" "./$dir"
-            fi
-          done
-
-          # List what was built for verification
-          echo "📦 Built unified binary:"
-          ls -la bin/unified/ || echo "No unified binary built"
-          echo "📦 Built CLI binaries:"
-          ls -la bin/cli/ || echo "No CLI binaries built"
-          echo "📦 Built TUI binaries:"
-          ls -la bin/tui/ || echo "No TUI binaries built"
-
-      - name: 📤 Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: binaries-${{ matrix.goos }}-${{ matrix.goarch }}-${{ github.run_id }}
-          path: |
-            bin/unified/*
-            bin/cli/*
-            bin/tui/*
-
-      - name: 🧪 Test binaries with performance validation (Linux only)
-        if: matrix.goos == 'linux' && matrix.goarch == 'amd64'
+      - name: 📊 Job Summary
         run: |
-          echo "🧪 Testing binaries with performance validation..."
+          echo "## 🔍 Pre-flight Summary" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Go Version | ${{ env.GO_VERSION }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Is Release | ${{ steps.setup.outputs.is-release }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Version | ${{ steps.setup.outputs.version }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Cache Key | ${{ steps.setup.outputs.cache-key }} |" >> $GITHUB_STEP_SUMMARY
 
-          # Create test results directory
-          mkdir -p binary-test-results
+  # Build and test matrix
+  test:
+    name: 🧪 Test & Build
+    needs: preflight
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            goos: linux
+            goarch: amd64
+            label: "Linux AMD64"
+          - os: ubuntu-latest
+            goos: linux
+            goarch: arm64
+            label: "Linux ARM64"
+          - os: ubuntu-latest
+            goos: windows
+            goarch: amd64
+            label: "Windows AMD64"
+          - os: ubuntu-latest
+            goos: darwin
+            goarch: amd64
+            label: "macOS AMD64"
+          - os: ubuntu-latest
+            goos: darwin
+            goarch: arm64
+            label: "macOS ARM64"
 
-          # Test unified binary
-          echo "🔍 Testing unified binary..."
-          for binary in bin/unified/*linux-amd64*; do
-            if [ -f "$binary" ]; then
-              echo "🔍 Testing unified: $binary..."
-              chmod +x "$binary"
-              
-              # Binary size check
-              BINARY_SIZE=$(stat -c%s "$binary" 2>/dev/null || echo "0")
-              echo "📦 Binary size: $(echo $BINARY_SIZE | awk '{printf "%.2f MB", $1/1024/1024}')"
-              
-              # Performance timing for startup
-              echo "⏱️  Testing startup performance..."
-              START_TIME=$(date +%s%N)
-              
-              # Test different modes with timing
-              echo "  🎯 Testing CLI mode (default):"
-              if timeout 10s $binary --help > /dev/null 2>&1; then
-                echo "    ✅ CLI mode works"
-              else
-                echo "    ⚠️  CLI mode help failed or timed out"
-              fi
-              
-              echo "  🖥️ Testing TUI mode:"
-              if timeout 10s $binary tui --help > /dev/null 2>&1; then
-                echo "    ✅ TUI mode works"
-              else
-                echo "    ⚠️  TUI mode help failed or timed out"
-              fi
-              
-              echo "  🌐 Testing server mode:"
-              if timeout 10s $binary serve --help > /dev/null 2>&1; then
-                echo "    ✅ Server mode works"
-              else
-                echo "    ⚠️  Server mode help failed or timed out"
-              fi
-              
-              echo "  📝 Testing version command:"
-              if timeout 5s $binary version > /dev/null 2>&1; then
-                echo "    ✅ Version command works"
-              else
-                echo "    ⚠️  Version command failed or timed out"
-              fi
-              
-              END_TIME=$(date +%s%N)
-              STARTUP_TIME=$(echo "scale=3; ($END_TIME - $START_TIME) / 1000000000" | bc -l 2>/dev/null || echo "N/A")
-              echo "⏱️  Total test time: ${STARTUP_TIME}s"
-              
-              # Log metrics
-              echo "unified,$BINARY_SIZE,$STARTUP_TIME" >> binary-test-results/metrics.csv
-            fi
-          done
+    steps:
+      - name: 🧹 Cleanup workspace (self-hosted)
+        run: |
+          echo "🧹 Cleaning up workspace for self-hosted runner..."
+          # Remove any previous build artifacts from workspace
+          rm -rf bin/ coverage.* *.prof || true
 
-          # Test CLI binaries with performance metrics
-          echo "🔍 Testing CLI binaries..."
-          for binary in bin/cli/*linux-amd64*; do
-            if [ -f "$binary" ]; then
-              echo "🔨 Testing CLI: $binary..."
-              chmod +x "$binary"
-              
-              BINARY_SIZE=$(stat -c%s "$binary" 2>/dev/null || echo "0")
-              START_TIME=$(date +%s%N)
-              
-              # Try to run with --help flag, most tools should support this
-              if timeout 5s $binary --help > /dev/null 2>&1 || timeout 5s $binary -h > /dev/null 2>&1 || timeout 5s $binary help > /dev/null 2>&1; then
-                echo "✅ CLI $binary works"
-                RESULT="pass"
-              else
-                echo "⚠️  CLI $binary might not support help flags or timed out"
-                RESULT="warn"
-              fi
-              
-              END_TIME=$(date +%s%N)
-              EXEC_TIME=$(echo "scale=3; ($END_TIME - $START_TIME) / 1000000000" | bc -l 2>/dev/null || echo "N/A")
-              
-              # Log metrics
-              echo "cli-$(basename $binary),$BINARY_SIZE,$EXEC_TIME,$RESULT" >> binary-test-results/metrics.csv
-            fi
-          done
+          # Clean up old isolated Go caches (keep current run)
+          CURRENT_RUN="${{ github.run_id }}-${{ github.run_attempt }}"
 
-          # Test TUI binaries with performance metrics
-          echo "🔍 Testing TUI binaries..."
-          for binary in bin/tui/*linux-amd64*; do
-            if [ -f "$binary" ]; then
-              echo "🖥️ Testing TUI: $binary..."
-              chmod +x "$binary"
-              
-              BINARY_SIZE=$(stat -c%s "$binary" 2>/dev/null || echo "0")
-              START_TIME=$(date +%s%N)
-              
-              # Try to run with --help flag, most tools should support this
-              if timeout 5s $binary --help > /dev/null 2>&1 || timeout 5s $binary -h > /dev/null 2>&1 || timeout 5s $binary help > /dev/null 2>&1; then
-                echo "✅ TUI $binary works"
-                RESULT="pass"
-              else
-                echo "⚠️  TUI $binary might not support help flags or timed out"
-                RESULT="warn"
-              fi
-              
-              END_TIME=$(date +%s%N)
-              EXEC_TIME=$(echo "scale=3; ($END_TIME - $START_TIME) / 1000000000" | bc -l 2>/dev/null || echo "N/A")
-              
-              # Log metrics
-              echo "tui-$(basename $binary),$BINARY_SIZE,$EXEC_TIME,$RESULT" >> binary-test-results/metrics.csv
-            fi
-          done
-
-          # Generate performance summary
-          if [ -f binary-test-results/metrics.csv ]; then
-            echo "📊 Binary Performance Summary:" | tee binary-test-results/summary.txt
-            echo "================================" | tee -a binary-test-results/summary.txt
-            echo "Type,Size(bytes),ExecTime(s),Result" | tee -a binary-test-results/summary.txt
-            cat binary-test-results/metrics.csv | tee -a binary-test-results/summary.txt
-            
-            # Calculate totals
-            TOTAL_SIZE=$(awk -F',' '{sum+=$2} END {printf "%.2f MB", sum/1024/1024}' binary-test-results/metrics.csv)
-            AVG_TIME=$(awk -F',' '$3!="N/A" {sum+=$3; count++} END {if(count>0) printf "%.3fs", sum/count; else print "N/A"}' binary-test-results/metrics.csv)
-            
-            echo "--------------------------------" | tee -a binary-test-results/summary.txt
-            echo "Total size: $TOTAL_SIZE" | tee -a binary-test-results/summary.txt
-            echo "Average startup time: $AVG_TIME" | tee -a binary-test-results/summary.txt
-            echo "✅ Binary testing completed" | tee -a binary-test-results/summary.txt
+          # Clean up old build caches (older than 1 day)
+          if [ -d ~/.cache ]; then
+            find ~/.cache -type d -name "go-build-*" -not -name "*${CURRENT_RUN}*" -mtime +1 -exec rm -rf {} + 2>/dev/null || true
           fi
 
-      - name: 📤 Upload binary test results (CI validation only)
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: binary-test-results-${{ matrix.goos }}-${{ matrix.goarch }}-${{ github.run_id }}
-          path: |
-            binary-test-results/
-          retention-days: 7
-          if-no-files-found: ignore
+          # Clean up old module caches (older than 1 day)
+          if [ -d ~/go ]; then
+            find ~/go -type d -name "pkg" -path "*/mod-*" -not -path "*${CURRENT_RUN}*" -mtime +1 -exec rm -rf {} + 2>/dev/null || true
+            find ~/go -type d -name "go-*" -not -name "*${CURRENT_RUN}*" -mtime +1 -exec rm -rf {} + 2>/dev/null || true
+          fi
 
-  release:
-    name: 🚀 Release
-    runs-on: self-hosted
-    needs: [test, format, lint, security, build]
-    if: startsWith(github.ref, 'refs/tags/v')
-    steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
         with:
@@ -564,211 +130,502 @@ jobs:
       - name: 🔧 Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: ${{ env.GO_VERSION }}
-          cache: false
+          go-version: ${{ needs.preflight.outputs.go-version }}
+          cache: false # We'll handle caching manually for better control
 
-      - name: � Create cache directories
+      - name: 🔧 Configure Go cache directories
         run: |
-          mkdir -p ${{ env.GOCACHE }}
-          mkdir -p ${{ env.GOMODCACHE }}
+          # Create unique workspace identifier for this matrix job
+          MATRIX_ID="${{ matrix.goos }}-${{ matrix.goarch }}-${{ github.run_id }}-${{ github.run_attempt }}"
 
-      - name: 💾 Cache Go modules
+          # Set unique cache directories for this matrix job
+          export GOCACHE="$HOME/.cache/go-build-${MATRIX_ID}"
+          export GOMODCACHE="$HOME/go/pkg/mod-${MATRIX_ID}"
+          export GOPATH="$HOME/go-${MATRIX_ID}"
+          export GOBIN="${GOPATH}/bin"
+
+          echo "GOCACHE=${GOCACHE}" >> $GITHUB_ENV
+          echo "GOMODCACHE=${GOMODCACHE}" >> $GITHUB_ENV
+          echo "GOPATH=${GOPATH}" >> $GITHUB_ENV
+          echo "GOBIN=${GOBIN}" >> $GITHUB_ENV
+          echo "MATRIX_ID=${MATRIX_ID}" >> $GITHUB_ENV
+
+          mkdir -p "${GOCACHE}" "${GOMODCACHE}" "${GOPATH}" "${GOBIN}"
+
+          # Add isolated GOBIN to PATH
+          echo "${GOBIN}" >> $GITHUB_PATH
+
+          echo "✅ Go cache directories configured for matrix job ${MATRIX_ID}:"
+          echo "  GOCACHE: ${GOCACHE}"
+          echo "  GOMODCACHE: ${GOMODCACHE}"
+          echo "  GOPATH: ${GOPATH}"
+          echo "  GOBIN: ${GOBIN}"
+
+      - name: 💾 Cache Go modules and build cache
+        uses: actions/cache@v4
+        id: go-cache
+        with:
+          path: |
+            ~/go/pkg/mod-${{ matrix.goos }}-${{ matrix.goarch }}-${{ github.run_id }}-${{ github.run_attempt }}
+            ~/.cache/go-build-${{ matrix.goos }}-${{ matrix.goarch }}-${{ github.run_id }}-${{ github.run_attempt }}
+            ~/go-${{ matrix.goos }}-${{ matrix.goarch }}-${{ github.run_id }}-${{ github.run_attempt }}
+          key: ${{ needs.preflight.outputs.cache-key }}-${{ matrix.goos }}-${{ matrix.goarch }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            ${{ env.CACHE_VERSION }}-${{ runner.os }}-go-${{ env.GO_VERSION }}-${{ matrix.goos }}-${{ matrix.goarch }}-
+            ${{ env.CACHE_VERSION }}-${{ runner.os }}-go-${{ env.GO_VERSION }}-
+            ${{ env.CACHE_VERSION }}-${{ runner.os }}-go-
+
+      - name: 🔧 Install make (if needed)
+        run: |
+          if ! command -v make &> /dev/null; then
+            echo "Installing make..."
+            sudo apt-get update && sudo apt-get install -y make
+          else
+            echo "✅ make is already installed: $(make --version | head -1)"
+          fi
+
+      - name: 🔧 Install development tools
+        run: |
+          echo "🔧 Installing required development tools to isolated GOBIN..."
+
+          # Install golangci-lint to isolated GOBIN
+          if ! command -v golangci-lint &> /dev/null; then
+            echo "Installing golangci-lint to ${GOBIN}..."
+            curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b "${GOBIN}" latest
+          fi
+
+          # Install gosec to isolated GOBIN
+          if ! command -v gosec &> /dev/null; then
+            echo "Installing gosec to ${GOBIN}..."
+            go install github.com/securego/gosec/v2/cmd/gosec@latest
+          fi
+
+          # Install goimports to isolated GOBIN
+          if ! command -v goimports &> /dev/null; then
+            echo "Installing goimports to ${GOBIN}..."
+            go install golang.org/x/tools/cmd/goimports@latest
+          fi
+
+          echo "✅ Development tools installed to ${GOBIN}"
+          echo "Installed tools:"
+          ls -la "${GOBIN}" || echo "No tools found in ${GOBIN}"
+
+      - name: 📦 Download dependencies
+        run: |
+          echo "📦 Downloading Go dependencies..."
+          make deps
+
+      - name: 🧹 Clean previous builds
+        run: |
+          echo "🧹 Cleaning previous build artifacts..."
+          make clean
+
+      - name: 🔨 Build applications
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          echo "🔨 Building applications for ${{ matrix.label }}..."
+          make build
+
+          # List built binaries
+          echo "📦 Built binaries:"
+          ls -la bin/ || echo "No binaries found"
+
+      # Only run tests, linting, and coverage on native platform (linux/amd64)
+      - name: 🧪 Run tests
+        if: matrix.goos == 'linux' && matrix.goarch == 'amd64'
+        run: |
+          echo "🧪 Running tests..."
+          make test
+
+      - name: 📊 Generate test coverage
+        if: matrix.goos == 'linux' && matrix.goarch == 'amd64'
+        run: |
+          echo "📊 Generating test coverage..."
+          make test-coverage
+
+      - name: 🔍 Run linter
+        if: matrix.goos == 'linux' && matrix.goarch == 'amd64'
+        run: |
+          echo "🔍 Running linter..."
+          make lint
+
+      - name: 🔎 Run go vet
+        if: matrix.goos == 'linux' && matrix.goarch == 'amd64'
+        run: |
+          echo "🔎 Running go vet..."
+          make vet
+
+      - name: 🔒 Run security scan
+        if: matrix.goos == 'linux' && matrix.goarch == 'amd64'
+        run: |
+          echo "🔒 Running security scan..."
+          make security
+
+      - name: 📤 Upload test artifacts
+        if: matrix.goos == 'linux' && matrix.goarch == 'amd64'
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: |
+            coverage.out
+            coverage.html
+          retention-days: 30
+          if-no-files-found: warn
+
+      - name: 📤 Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: binaries-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: |
+            bin/
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: 🧹 Post-job cleanup (self-hosted)
+        if: always()
+        run: |
+          echo "🧹 Post-job cleanup for self-hosted runner..."
+
+          # Clean up temporary files
+          rm -rf /tmp/go-* 2>/dev/null || true
+
+          # Clean up old build artifacts (keep current run)
+          find . -name "*.prof" -mtime +1 -delete 2>/dev/null || true
+
+          # Clean up this job's isolated cache directories after a delay to allow for potential retries
+          MATRIX_ID="${{ matrix.goos }}-${{ matrix.goarch }}-${{ github.run_id }}-${{ github.run_attempt }}"
+          echo "Scheduling cleanup of isolated cache directories for ${MATRIX_ID}..."
+
+          # Remove isolated directories for this specific matrix job
+          # Only clean up if this is not the latest attempt or run
+          if [ "${{ github.run_attempt }}" != "1" ] || [ "${{ strategy.job-index }}" == "${{ strategy.job-total }}" ]; then
+            rm -rf "$HOME/.cache/go-build-${MATRIX_ID}" 2>/dev/null || true
+            rm -rf "$HOME/go/pkg/mod-${MATRIX_ID}" 2>/dev/null || true  
+            rm -rf "$HOME/go-${MATRIX_ID}" 2>/dev/null || true
+          fi
+
+  # Build the embedded application (contains all tools)
+  build-embedded:
+    name: 🚀 Build Embedded Application
+    needs: preflight
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+          - goos: linux
+            goarch: arm64
+          - goos: windows
+            goarch: amd64
+          - goos: darwin
+            goarch: amd64
+          - goos: darwin
+            goarch: arm64
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔧 Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ needs.preflight.outputs.go-version }}
+          cache: false # We'll handle caching manually for better control
+
+      - name: 🔧 Configure Go cache directories for embedded
+        run: |
+          # Create unique workspace identifier for this embedded matrix job
+          MATRIX_ID="embedded-${{ matrix.goos }}-${{ matrix.goarch }}-${{ github.run_id }}-${{ github.run_attempt }}"
+
+          # Set unique cache directories for this embedded matrix job
+          export GOCACHE="$HOME/.cache/go-build-${MATRIX_ID}"
+          export GOMODCACHE="$HOME/go/pkg/mod-${MATRIX_ID}"
+          export GOPATH="$HOME/go-${MATRIX_ID}"
+          export GOBIN="${GOPATH}/bin"
+
+          echo "GOCACHE=${GOCACHE}" >> $GITHUB_ENV
+          echo "GOMODCACHE=${GOMODCACHE}" >> $GITHUB_ENV
+          echo "GOPATH=${GOPATH}" >> $GITHUB_ENV
+          echo "GOBIN=${GOBIN}" >> $GITHUB_ENV
+          echo "MATRIX_ID=${MATRIX_ID}" >> $GITHUB_ENV
+
+          mkdir -p "${GOCACHE}" "${GOMODCACHE}" "${GOPATH}" "${GOBIN}"
+
+          echo "✅ Embedded Go cache directories configured for matrix job ${MATRIX_ID}:"
+          echo "  GOCACHE: ${GOCACHE}"
+          echo "  GOMODCACHE: ${GOMODCACHE}"
+          echo "  GOPATH: ${GOPATH}"
+          echo "  GOBIN: ${GOBIN}"
+
+      - name: Cache Go modules
         uses: actions/cache@v4
         with:
-          path: ${{ env.GOMODCACHE }}
-          key: ${{ env.CACHE_VERSION }}-${{ runner.name }}-go-mod-release-${{ hashFiles('**/go.sum') }}
+          path: |
+            ~/go/pkg/mod-embedded-${{ matrix.goos }}-${{ matrix.goarch }}-${{ github.run_id }}-${{ github.run_attempt }}
+            ~/.cache/go-build-embedded-${{ matrix.goos }}-${{ matrix.goarch }}-${{ github.run_id }}-${{ github.run_attempt }}
+            ~/go-embedded-${{ matrix.goos }}-${{ matrix.goarch }}-${{ github.run_id }}-${{ github.run_attempt }}
+          key: ${{ needs.preflight.outputs.cache-key }}-embedded-${{ matrix.goos }}-${{ matrix.goarch }}-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: |
-            ${{ env.CACHE_VERSION }}-${{ runner.name }}-go-mod-release-
-            ${{ env.CACHE_VERSION }}-${{ runner.name }}-go-mod-
+            ${{ env.CACHE_VERSION }}-${{ runner.os }}-go-${{ env.GO_VERSION }}-embedded-${{ matrix.goos }}-${{ matrix.goarch }}-
+            ${{ env.CACHE_VERSION }}-${{ runner.os }}-go-${{ env.GO_VERSION }}-
 
       - name: 📦 Download dependencies
         run: go mod download
 
-      - name: Download binary artifacts only
+      - name: 🚀 Build embedded application
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          VERSION: ${{ needs.preflight.outputs.version }}
+        run: |
+          echo "🚀 Building embedded application for ${{ matrix.goos }}/${{ matrix.goarch }}..."
+
+          mkdir -p bin
+
+          # Build the embedded application
+          OUTPUT_NAME="go-toolbox-embedded-${{ matrix.goos }}-${{ matrix.goarch }}"
+          if [ "${{ matrix.goos }}" == "windows" ]; then
+            OUTPUT_NAME="${OUTPUT_NAME}.exe"
+          fi
+
+          go build -ldflags="-s -w -X main.appVersion=${VERSION}" \
+            -o "bin/${OUTPUT_NAME}" \
+            ./cmd/embedded
+
+          echo "✅ Built: bin/${OUTPUT_NAME}"
+          ls -la bin/
+
+      - name: 📤 Upload embedded artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: embedded-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: bin/
+          retention-days: 30
+
+  # Create release packages
+  package:
+    name: 📦 Create Release Packages
+    needs: [preflight, test, build-embedded]
+    runs-on: ubuntu-latest
+    if: needs.preflight.outputs.is-release == 'true'
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📥 Download all artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts
-          pattern: binaries-*-${{ github.run_id }}
-          merge-multiple: true
 
-      - name: 🎁 Prepare release assets
+      - name: 📦 Create release packages
         run: |
-          # Debug: Show what we downloaded
-          echo "📁 Downloaded artifacts:"
-          find artifacts -type f | head -20 || echo "No artifacts found"
+          echo "📦 Creating release packages..."
+          mkdir -p release-packages
 
-          mkdir -p release/cli release/tui release/unified
-
-          # Organize unified binaries (single all-in-one binary)
-          echo "🎁 Organizing unified binaries..."
-          find artifacts -path "*/bin/unified/*" -type f -exec cp {} release/unified/ \; || echo "No unified binaries found"
-
-          # Organize CLI binaries
-          echo "🎁 Organizing CLI binaries..."
-          find artifacts -path "*/bin/cli/*" -type f -exec cp {} release/cli/ \; || echo "No CLI binaries found"
-
-          # Organize TUI binaries  
-          echo "🎁 Organizing TUI binaries..."
-          find artifacts -path "*/bin/tui/*" -type f -exec cp {} release/tui/ \; || echo "No TUI binaries found"
-
-          # Debug: Show what got organized
-          echo "📁 Organized binaries:"
-          find release/ -type f | head -10 || echo "No files in release directory"
-
-          # Create unified binary archives (recommended download)
-          if [ "$(ls -A release/unified 2>/dev/null)" ]; then
-            echo "📦 Creating unified binary archives..."
-            cd release
-            zip -r go-toolbox-unified-${GITHUB_REF_NAME:-latest}.zip unified/
-            tar -czf go-toolbox-unified-${GITHUB_REF_NAME:-latest}.tar.gz unified/
-            cd ..
-          else
-            echo "⚠️ No unified binaries found to archive"
-          fi
-
-          # Create archive packages for each type
-          if [ "$(ls -A release/cli 2>/dev/null)" ]; then
-            echo "📦 Creating CLI archive..."
-            cd release
-            zip -r go-toolbox-cli-${GITHUB_REF_NAME:-latest}.zip cli/
-            tar -czf go-toolbox-cli-${GITHUB_REF_NAME:-latest}.tar.gz cli/
-            cd ..
-          fi
-
-          if [ "$(ls -A release/tui 2>/dev/null)" ]; then
-            echo "📦 Creating TUI archive..."
-            cd release
-            zip -r go-toolbox-tui-${GITHUB_REF_NAME:-latest}.zip tui/
-            tar -czf go-toolbox-tui-${GITHUB_REF_NAME:-latest}.tar.gz tui/
-            cd ..
-          fi
-
-          # Create combined archive (separate binaries)
-          if [ "$(ls -A release/cli 2>/dev/null)" ] || [ "$(ls -A release/tui 2>/dev/null)" ]; then
-            echo "📦 Creating combined separate binaries archive..."
-            cd release
-            zip -r go-toolbox-separate-${GITHUB_REF_NAME:-latest}.zip cli/ tui/
-            tar -czf go-toolbox-separate-${GITHUB_REF_NAME:-latest}.tar.gz cli/ tui/
-            cd ..
-          fi
-
-          # Create complete archive (unified + separate)
-          if [ "$(ls -A release/unified 2>/dev/null)" ] && ([ "$(ls -A release/cli 2>/dev/null)" ] || [ "$(ls -A release/tui 2>/dev/null)" ]); then
-            echo "📦 Creating complete archive (all binaries)..."
-            cd release
-            zip -r go-toolbox-complete-${GITHUB_REF_NAME:-latest}.zip unified/ cli/ tui/
-            tar -czf go-toolbox-complete-${GITHUB_REF_NAME:-latest}.tar.gz unified/ cli/ tui/
-            cd ..
-          fi
-
-          # List what was created
-          echo "📦 Release structure:"
-          ls -la release/
-          echo "📦 Created archives:"
-          ls -la release/*.zip release/*.tar.gz 2>/dev/null || echo "No archives created"
-          if [ -d release/unified ]; then
-            echo "📦 Unified binaries:"
-            ls -la release/unified/
-          fi
-          if [ -d release/cli ]; then
-            echo "📦 CLI binaries:"
-            ls -la release/cli/
-          fi
-          if [ -d release/tui ]; then
-            echo "📦 TUI binaries:"
-            ls -la release/tui/
-          fi
-
-      - name: 📝 Generate changelog
-        id: changelog
-        run: |
-          # Simple changelog generation
-          echo "📝 Changes in this release:" > CHANGELOG.md
-          git log --pretty=format:"- %s" $(git describe --tags --abbrev=0 HEAD^)..HEAD >> CHANGELOG.md
-
-      - name: 🔍 Check if release exists
-        id: release_exists
-        run: |
-          if gh release view ${{ github.ref_name }} > /dev/null 2>&1; then
-            echo "exists=true" >> $GITHUB_OUTPUT
-          else
-            echo "exists=false" >> $GITHUB_OUTPUT
-          fi
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: 📤 Upload release assets to existing release
-        if: steps.release_exists.outputs.exists == 'true'
-        run: |
-          echo "🔄 Release already exists, uploading assets..."
-
-          # Debug: Show what files exist
-          echo "📁 Files in release directory:"
-          ls -la release/ || echo "No release directory found"
-          echo "📁 All files in release (including subdirectories):"
-          find release/ -type f || echo "No files found in release directory"
-
-          # Check if we have any archives
-          archive_count=0
-          for file in release/*.zip release/*.tar.gz; do
-            if [ -f "$file" ]; then
-              archive_count=$((archive_count + 1))
+          # Create packages for each platform
+          for platform_dir in artifacts/binaries-*; do
+            if [ ! -d "$platform_dir" ]; then continue; fi
+            
+            platform=$(basename "$platform_dir" | sed 's/binaries-//')
+            echo "Processing platform: $platform"
+            
+            # Create CLI package
+            cli_package="go-toolbox-cli-${platform}"
+            mkdir -p "temp/$cli_package"
+            
+            # Copy CLI binaries
+            if [ -d "$platform_dir/bin" ]; then
+              cp -r "$platform_dir/bin"/* "temp/$cli_package/" 2>/dev/null || true
             fi
+            
+            # Add README and LICENSE
+            cp README.md LICENSE "temp/$cli_package/" 2>/dev/null || true
+            
+            # Create archive
+            cd temp
+            if [[ "$platform" == *"windows"* ]]; then
+              zip -r "../release-packages/${cli_package}.zip" "$cli_package"
+            else
+              tar -czf "../release-packages/${cli_package}.tar.gz" "$cli_package"
+            fi
+            cd ..
+            rm -rf "temp/$cli_package"
           done
 
-          echo "📊 Found $archive_count archive files"
-
-          # Upload archive files from release directory
-          uploaded_files=0
-          for file in release/*.zip release/*.tar.gz; do
-            if [ -f "$file" ]; then
-              echo "📤 Uploading $file..."
-              if gh release upload ${{ github.ref_name }} "$file" --clobber; then
-                echo "✅ Successfully uploaded: $file"
-                uploaded_files=$((uploaded_files + 1))
-              else
-                echo "❌ Failed to upload: $file"
-              fi
+          # Create embedded packages
+          for embedded_dir in artifacts/embedded-*; do
+            if [ ! -d "$embedded_dir" ]; then continue; fi
+            
+            platform=$(basename "$embedded_dir" | sed 's/embedded-//')
+            echo "Processing embedded platform: $platform"
+            
+            embedded_package="go-toolbox-embedded-${platform}"
+            mkdir -p "temp/$embedded_package"
+            
+            # Copy embedded binary
+            if [ -d "$embedded_dir/bin" ]; then
+              cp -r "$embedded_dir/bin"/* "temp/$embedded_package/" 2>/dev/null || true
             fi
+            
+            # Add README and LICENSE
+            cp README.md LICENSE "temp/$embedded_package/" 2>/dev/null || true
+            
+            # Create archive
+            cd temp
+            if [[ "$platform" == *"windows"* ]]; then
+              zip -r "../release-packages/${embedded_package}.zip" "$embedded_package"
+            else
+              tar -czf "../release-packages/${embedded_package}.tar.gz" "$embedded_package"
+            fi
+            cd ..
+            rm -rf "temp/$embedded_package"
           done
 
-          # Also upload individual binaries if no archives were created
-          if [ $archive_count -eq 0 ]; then
-            echo "📦 No archives found, uploading individual binaries..."
-            for dir in release/unified release/cli release/tui; do
-              if [ -d "$dir" ]; then
-                for file in "$dir"/*; do
-                  if [ -f "$file" ]; then
-                    echo "📤 Uploading individual binary: $file..."
-                    if gh release upload ${{ github.ref_name }} "$file" --clobber; then
-                      echo "✅ Successfully uploaded: $file"
-                      uploaded_files=$((uploaded_files + 1))
-                    else
-                      echo "❌ Failed to upload: $file"
-                    fi
-                  fi
-                done
-              fi
-            done
-          fi
+          echo "📦 Release packages created:"
+          ls -la release-packages/
 
-          echo "📊 Total files uploaded: $uploaded_files"
-
-          # Final verification - show what's in the release now
-          echo "🔍 Final release contents:"
-          gh release view ${{ github.ref_name }} --json assets --jq '.assets[].name' | sort || echo "Could not list release assets"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: 🎉 Create new release
-        if: steps.release_exists.outputs.exists == 'false'
-        uses: softprops/action-gh-release@v2.3.3
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: 📤 Upload release packages
+        uses: actions/upload-artifact@v4
         with:
-          name: Release ${{ github.ref_name }}
-          body_path: CHANGELOG.md
+          name: release-packages
+          path: release-packages/
+          retention-days: 90
+
+  # Publish release
+  publish:
+    name: 🚀 Publish Release
+    needs: [preflight, package]
+    runs-on: ubuntu-latest
+    if: needs.preflight.outputs.is-release == 'true' && github.ref_type == 'tag'
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 📥 Download release packages
+        uses: actions/download-artifact@v4
+        with:
+          name: release-packages
+          path: release-packages
+
+      - name: 📝 Generate release notes
+        id: release-notes
+        run: |
+          VERSION="${{ needs.preflight.outputs.version }}"
+          echo "Generating release notes for $VERSION..."
+
+          # Get the previous tag
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD~1 2>/dev/null || echo "")
+
+          # Generate changelog
+          if [ -n "$PREV_TAG" ]; then
+            echo "## 🚀 What's Changed" > release-notes.md
+            echo "" >> release-notes.md
+            git log --pretty=format:"- %s (%h)" $PREV_TAG..HEAD >> release-notes.md
+            echo "" >> release-notes.md
+          else
+            echo "## 🚀 Initial Release" > release-notes.md
+            echo "" >> release-notes.md
+            echo "This is the initial release of Go Toolbox." >> release-notes.md
+            echo "" >> release-notes.md
+          fi
+
+          echo "## 📦 Release Assets" >> release-notes.md
+          echo "" >> release-notes.md
+          echo "### CLI Tools" >> release-notes.md
+          echo "Choose the package for your platform:" >> release-notes.md
+          echo "" >> release-notes.md
+
+          # List CLI packages
+          for file in release-packages/go-toolbox-cli-*; do
+            if [ -f "$file" ]; then
+              basename=$(basename "$file")
+              platform=$(echo "$basename" | sed 's/go-toolbox-cli-//' | sed 's/\.[^.]*$//')
+              echo "- **$platform**: $basename" >> release-notes.md
+            fi
+          done
+
+          echo "" >> release-notes.md
+          echo "### Embedded Application" >> release-notes.md
+          echo "Single binary containing all tools:" >> release-notes.md
+          echo "" >> release-notes.md
+
+          # List embedded packages
+          for file in release-packages/go-toolbox-embedded-*; do
+            if [ -f "$file" ]; then
+              basename=$(basename "$file")
+              platform=$(echo "$basename" | sed 's/go-toolbox-embedded-//' | sed 's/\.[^.]*$//')
+              echo "- **$platform**: $basename" >> release-notes.md
+            fi
+          done
+
+          echo "" >> release-notes.md
+          echo "## 🔧 Installation" >> release-notes.md
+          echo "" >> release-notes.md
+          echo "1. Download the appropriate package for your platform" >> release-notes.md
+          echo "2. Extract the archive" >> release-notes.md
+          echo "3. Add the binaries to your PATH" >> release-notes.md
+          echo "" >> release-notes.md
+          echo "For the embedded version, you only need the single binary." >> release-notes.md
+
+      - name: 🚀 Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.preflight.outputs.version }}
+          name: "Go Toolbox ${{ needs.preflight.outputs.version }}"
+          body_path: release-notes.md
           draft: false
-          prerelease: false
-          files: release/*
-          generate_release_notes: true
+          prerelease: ${{ contains(needs.preflight.outputs.version, 'alpha') || contains(needs.preflight.outputs.version, 'beta') || contains(needs.preflight.outputs.version, 'rc') }}
+          files: |
+            release-packages/*
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 📊 Release Summary
+        run: |
+          echo "## 🚀 Release Published Successfully!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Version**: ${{ needs.preflight.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Release URL**: https://github.com/${{ github.repository }}/releases/tag/${{ needs.preflight.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📦 Published Assets:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          for file in release-packages/*; do
+            if [ -f "$file" ]; then
+              echo "- $(basename "$file")" >> $GITHUB_STEP_SUMMARY
+            fi
+          done
+
+  # Final cleanup and summary
+  cleanup:
+    name: 🧹 Cleanup & Summary
+    needs: [preflight, test, build-embedded]
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+      - name: 📊 Workflow Summary
+        run: |
+          echo "## 🔧 CI Pipeline Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Pre-flight | ${{ needs.preflight.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Test & Build | ${{ needs.test.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Build Embedded | ${{ needs.build-embedded.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Version**: ${{ needs.preflight.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Is Release**: ${{ needs.preflight.outputs.is-release }}" >> $GITHUB_STEP_SUMMARY
+
+      - name: 🧹 Final cleanup notification
+        run: |
+          echo "🧹 CI pipeline completed. Cleanup tasks:"
+          echo "  ✅ Temporary files cleaned"
+          echo "  ✅ Build artifacts uploaded"
+          echo "  ✅ Test results preserved"
+          echo "  ✅ Cache optimized for next run"

@@ -15,7 +15,7 @@ on:
   pull_request:
     branches: [main, develop] # Run on PRs to main/develop for regression detection
   workflow_run:
-    workflows: ["CI"] # Run after CI completes successfully to avoid duplication
+    workflows: ["🔧 CI"] # Run after CI completes successfully to avoid duplication
     types:
       - completed
     branches: [main, develop, feature/*] # Run on feature branches only after CI passes

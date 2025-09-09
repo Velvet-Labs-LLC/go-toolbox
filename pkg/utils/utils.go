@@ -2,11 +2,11 @@
 package utils
 
 import (
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
 	"io"
-	"math/rand/v2"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -232,12 +232,14 @@ func (f *FileUtils) MkdirAll(path string, perm os.FileMode) error {
 
 // Copy copies a file from src to dst
 func (f *FileUtils) Copy(src, dst string) error {
+	// #nosec G304 - This is a utility function that needs to accept user-provided paths
 	sourceFile, err := os.Open(src)
 	if err != nil {
 		return err
 	}
 	defer sourceFile.Close()
 
+	// #nosec G304 - This is a utility function that needs to accept user-provided paths
 	destFile, err := os.Create(dst)
 	if err != nil {
 		return err
@@ -250,6 +252,7 @@ func (f *FileUtils) Copy(src, dst string) error {
 
 // ReadLines reads all lines from a file
 func (f *FileUtils) ReadLines(path string) ([]string, error) {
+	// #nosec G304 - This is a utility function that needs to accept user-provided paths
 	content, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
@@ -297,6 +300,7 @@ func (h *HashUtils) SHA256(text string) string {
 
 // MD5File calculates the SHA256 hash of a file (MD5 is deprecated, using SHA256 instead)
 func (h *HashUtils) MD5File(path string) (string, error) {
+	// #nosec G304 - This is a utility function that needs to accept user-provided paths
 	file, err := os.Open(path)
 	if err != nil {
 		return "", err
@@ -313,6 +317,7 @@ func (h *HashUtils) MD5File(path string) (string, error) {
 
 // SHA256File calculates the SHA256 hash of a file
 func (h *HashUtils) SHA256File(path string) (string, error) {
+	// #nosec G304 - This is a utility function that needs to accept user-provided paths
 	file, err := os.Open(path)
 	if err != nil {
 		return "", err
@@ -342,19 +347,33 @@ func (r *RandomUtils) String(length int) string {
 	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 	result := make([]byte, length)
 	for i := range result {
-		result[i] = charset[rand.IntN(len(charset))]
+		randomByte := make([]byte, 1)
+		_, _ = rand.Read(randomByte) // #nosec G104 - crypto/rand.Read() only fails if system is out of entropy
+		result[i] = charset[int(randomByte[0])%len(charset)]
 	}
 	return string(result)
 }
 
 // Int generates a random integer between min and max (inclusive)
 func (r *RandomUtils) Int(minVal, maxVal int) int {
-	return rand.IntN(maxVal-minVal+1) + minVal
+	if maxVal <= minVal {
+		return minVal
+	}
+	diff := maxVal - minVal + 1
+	randomBytes := make([]byte, 4)
+	_, _ = rand.Read(randomBytes) // #nosec G104 - crypto/rand.Read() only fails if system is out of entropy
+	randomInt := int(randomBytes[0])<<24 | int(randomBytes[1])<<16 | int(randomBytes[2])<<8 | int(randomBytes[3])
+	if randomInt < 0 {
+		randomInt = -randomInt
+	}
+	return randomInt%diff + minVal
 }
 
 // Bool generates a random boolean
 func (r *RandomUtils) Bool() bool {
-	return rand.IntN(2) == 1
+	randomByte := make([]byte, 1)
+	_, _ = rand.Read(randomByte) // #nosec G104 - crypto/rand.Read() only fails if system is out of entropy
+	return randomByte[0]%2 == 1
 }
 
 // Choice randomly selects an item from a slice
@@ -362,14 +381,27 @@ func (r *RandomUtils) Choice(items []string) string {
 	if len(items) == 0 {
 		return ""
 	}
-	return items[rand.IntN(len(items))]
+	randomBytes := make([]byte, 4)
+	_, _ = rand.Read(randomBytes) // #nosec G104 - crypto/rand.Read() only fails if system is out of entropy
+	randomInt := int(randomBytes[0])<<24 | int(randomBytes[1])<<16 | int(randomBytes[2])<<8 | int(randomBytes[3])
+	if randomInt < 0 {
+		randomInt = -randomInt
+	}
+	return items[randomInt%len(items)]
 }
 
 // Shuffle shuffles a string slice in place
 func (r *RandomUtils) Shuffle(slice []string) {
-	rand.Shuffle(len(slice), func(i, j int) {
+	for i := len(slice) - 1; i > 0; i-- {
+		randomBytes := make([]byte, 4)
+		_, _ = rand.Read(randomBytes) // #nosec G104 - crypto/rand.Read() only fails if system is out of entropy
+		randomInt := int(randomBytes[0])<<24 | int(randomBytes[1])<<16 | int(randomBytes[2])<<8 | int(randomBytes[3])
+		if randomInt < 0 {
+			randomInt = -randomInt
+		}
+		j := randomInt % (i + 1)
 		slice[i], slice[j] = slice[j], slice[i]
-	})
+	}
 }
 
 // ValidationUtils provides validation utilities

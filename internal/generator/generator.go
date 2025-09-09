@@ -302,7 +302,7 @@ func (m *GeneratorModel) generateTool() error {
 
 	// Create directory structure
 	toolDir := filepath.Join("cmd", strings.ToLower(m.toolType.String()), m.toolName)
-	if err := os.MkdirAll(toolDir, 0755); err != nil {
+	if err := os.MkdirAll(toolDir, 0750); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
@@ -359,6 +359,7 @@ func (m *GeneratorModel) generateMainFile(toolDir string) error {
 		PackageName: strings.ReplaceAll(m.toolName, "-", ""),
 	}
 
+	// #nosec G304 - This creates files in a controlled directory structure
 	file, err := os.Create(filepath.Join(toolDir, "main.go"))
 	if err != nil {
 		return err
@@ -372,17 +373,18 @@ func (m *GeneratorModel) generateMainFile(toolDir string) error {
 func (m *GeneratorModel) generateWebFiles(toolDir string) error {
 	// Create templates directory
 	templatesDir := filepath.Join(toolDir, "templates")
-	if err := os.MkdirAll(templatesDir, 0755); err != nil {
+	if err := os.MkdirAll(templatesDir, 0750); err != nil {
 		return err
 	}
 
 	// Create static directory
 	staticDir := filepath.Join(toolDir, "static")
-	if err := os.MkdirAll(staticDir, 0755); err != nil {
+	if err := os.MkdirAll(staticDir, 0750); err != nil {
 		return err
 	}
 
 	// Create index template
+	// #nosec G304 - This creates files in a controlled directory structure
 	indexFile, err := os.Create(filepath.Join(templatesDir, "index.html"))
 	if err != nil {
 		return err

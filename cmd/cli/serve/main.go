@@ -71,7 +71,14 @@ func main() {
 			// Generate self-signed cert
 			cert, key = generateSelfSignedCert()
 		}
-		srv := &http.Server{Addr: addr, Handler: nil}
+		srv := &http.Server{
+			Addr:              addr,
+			Handler:           nil,
+			ReadTimeout:       15 * time.Second,
+			WriteTimeout:      15 * time.Second,
+			ReadHeaderTimeout: 5 * time.Second,
+			IdleTimeout:       60 * time.Second,
+		}
 		if cert == "" || key == "" {
 			log.Fatal("Failed to generate or find certificate and key for HTTPS.")
 		}
@@ -81,13 +88,24 @@ func main() {
 			if err != nil {
 				log.Fatalf("Failed to load self-signed certificate: %v", err)
 			}
-			srv.TLSConfig = &tls.Config{Certificates: []tls.Certificate{tlsCert}}
+			srv.TLSConfig = &tls.Config{
+				Certificates: []tls.Certificate{tlsCert},
+				MinVersion:   tls.VersionTLS12,
+			}
 			log.Fatal(srv.ListenAndServeTLS("", ""))
 		} else {
 			log.Fatal(srv.ListenAndServeTLS(cert, key))
 		}
 	} else {
-		log.Fatal(http.ListenAndServe(addr, nil))
+		srv := &http.Server{
+			Addr:              addr,
+			Handler:           nil,
+			ReadTimeout:       15 * time.Second,
+			WriteTimeout:      15 * time.Second,
+			ReadHeaderTimeout: 5 * time.Second,
+			IdleTimeout:       60 * time.Second,
+		}
+		log.Fatal(srv.ListenAndServe())
 	}
 }
 

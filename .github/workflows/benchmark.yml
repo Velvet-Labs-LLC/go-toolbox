@@ -100,9 +100,6 @@ jobs:
           - os: ubuntu-latest
             goarch: amd64
             label: "Linux AMD64"
-          - os: ubuntu-latest
-            goarch: arm64
-            label: "Linux ARM64"
     steps:
       - name: 📥 Checkout current code
         uses: actions/checkout@v4

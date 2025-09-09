@@ -1,4 +1,4 @@
-name: CI
+name: 🚀 CI Pipeline
 
 # Cache Strategy:
 # - Each job type has its own cache namespace (test, format, lint, security, build, release)
@@ -27,19 +27,19 @@ permissions:
 
 jobs:
   test:
-    name: Test
+    name: 🧪 Test Suite
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: 📥 Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Go
+      - name: 🔧 Set up Go
         uses: actions/setup-go@v4
         with:
           go-version: ${{ env.GO_VERSION }}
 
       # Cache Go modules and build cache for better performance
-      - name: Cache Go modules
+      - name: 💾 Cache Go modules
         uses: actions/cache@v4
         with:
           path: |
@@ -50,7 +50,7 @@ jobs:
             ${{ env.CACHE_VERSION }}-${{ runner.os }}-go-test-
             ${{ env.CACHE_VERSION }}-${{ runner.os }}-go-
 
-      - name: Download dependencies
+      - name: 📦 Download dependencies
         run: go mod download
 
       - name: 🧪 Run tests with coverage and detailed reporting
@@ -134,30 +134,30 @@ jobs:
             coverage.out
           retention-days: 30
 
-      - name: Test Makefile targets
+      - name: 🧪 Test Makefile targets
         run: |
           make clean
           make deps
           make build
 
-      - name: Upload coverage to Codecov
+      - name: 📊 Upload coverage to Codecov
         uses: codecov/codecov-action@v3
         with:
           file: ./coverage.out
 
   format:
-    name: Format Check
+    name: 🎨 Format Check
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: 📥 Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Go
+      - name: 🔧 Set up Go
         uses: actions/setup-go@v4
         with:
           go-version: ${{ env.GO_VERSION }}
 
-      - name: Cache Go modules
+      - name: 💾 Cache Go modules
         uses: actions/cache@v4
         with:
           path: |
@@ -168,7 +168,7 @@ jobs:
             ${{ env.CACHE_VERSION }}-${{ runner.os }}-go-format-
             ${{ env.CACHE_VERSION }}-${{ runner.os }}-go-
 
-      - name: Check formatting
+      - name: ✨ Check formatting
         run: |
           if [ "$(gofmt -s -l . | wc -l)" -gt 0 ]; then
             echo "Code is not formatted. Please run 'go fmt ./...'"
@@ -176,22 +176,22 @@ jobs:
             exit 1
           fi
 
-      - name: Go vet
+      - name: 🔍 Go vet
         run: go vet ./...
 
   lint:
-    name: Lint
+    name: 🔍 Lint Check
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: 📥 Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Go
+      - name: 🔧 Set up Go
         uses: actions/setup-go@v4
         with:
           go-version: ${{ env.GO_VERSION }}
 
-      - name: Cache Go modules
+      - name: 💾 Cache Go modules
         uses: actions/cache@v4
         with:
           path: |
@@ -202,25 +202,25 @@ jobs:
             ${{ env.CACHE_VERSION }}-${{ runner.os }}-go-lint-
             ${{ env.CACHE_VERSION }}-${{ runner.os }}-go-
 
-      - name: golangci-lint
+      - name: 🧹 golangci-lint
         uses: golangci/golangci-lint-action@v8.0.0
         with:
           version: v2.4.0
           args: --timeout=10m
 
   security:
-    name: Security
+    name: 🔒 Security Scan
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: 📥 Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Go
+      - name: 🔧 Set up Go
         uses: actions/setup-go@v4
         with:
           go-version: ${{ env.GO_VERSION }}
 
-      - name: Cache Go modules
+      - name: 💾 Cache Go modules
         uses: actions/cache@v4
         with:
           path: |
@@ -231,13 +231,13 @@ jobs:
             ${{ env.CACHE_VERSION }}-${{ runner.os }}-go-security-
             ${{ env.CACHE_VERSION }}-${{ runner.os }}-go-
 
-      - name: Run Gosec Security Scanner
+      - name: 🛡️ Run Gosec Security Scanner
         uses: securego/gosec@v2.22.8
         with:
           args: "./..."
 
   build:
-    name: Build
+    name: 🏗️ Build Matrix
     runs-on: ubuntu-latest
     needs: [test, format, lint, security]
     strategy:
@@ -249,15 +249,15 @@ jobs:
           - goos: windows
             goarch: arm64
     steps:
-      - name: Checkout code
+      - name: 📥 Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Go
+      - name: 🔧 Set up Go
         uses: actions/setup-go@v4
         with:
           go-version: ${{ env.GO_VERSION }}
 
-      - name: Cache Go modules
+      - name: 💾 Cache Go modules
         uses: actions/cache@v4
         with:
           path: |
@@ -269,10 +269,10 @@ jobs:
             ${{ env.CACHE_VERSION }}-${{ runner.os }}-go-build-
             ${{ env.CACHE_VERSION }}-${{ runner.os }}-go-
 
-      - name: Download dependencies
+      - name: 📦 Download dependencies
         run: go mod download
 
-      - name: Build binaries
+      - name: 🔨 Build binaries
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
@@ -280,7 +280,7 @@ jobs:
           mkdir -p bin/cli bin/tui bin/unified
 
           # Build unified binary (all-in-one)
-          echo "Building unified binary..."
+          echo "🔨 Building unified binary..."
           if [ "$GOOS" = "windows" ]; then
             go build -ldflags="-s -w" -o "bin/unified/go-toolbox-${{ matrix.goos }}-${{ matrix.goarch }}.exe" "./cmd/unified"
           else
@@ -291,7 +291,7 @@ jobs:
           for dir in $(find cmd/cli -type f -name "main.go" -exec dirname {} \; | sort); do
             app=$(basename $dir)
             bin_name="$app"
-            echo "Building CLI: $dir as $bin_name..."
+            echo "🔨 Building CLI: $dir as $bin_name..."
             if [ "$GOOS" = "windows" ]; then
               go build -ldflags="-s -w" -o "bin/cli/${bin_name}-${{ matrix.goos }}-${{ matrix.goarch }}.exe" "./$dir"
             else
@@ -303,7 +303,7 @@ jobs:
           for dir in $(find cmd/tui -type f -name "main.go" -exec dirname {} \; | sort); do
             app=$(basename $dir)
             bin_name="$app"
-            echo "Building TUI: $dir as $bin_name..."
+            echo "🔨 Building TUI: $dir as $bin_name..."
             if [ "$GOOS" = "windows" ]; then
               go build -ldflags="-s -w" -o "bin/tui/${bin_name}-${{ matrix.goos }}-${{ matrix.goarch }}.exe" "./$dir"
             else
@@ -312,14 +312,14 @@ jobs:
           done
 
           # List what was built for verification
-          echo "Built unified binary:"
+          echo "📦 Built unified binary:"
           ls -la bin/unified/ || echo "No unified binary built"
-          echo "Built CLI binaries:"
+          echo "📦 Built CLI binaries:"
           ls -la bin/cli/ || echo "No CLI binaries built"
-          echo "Built TUI binaries:"
+          echo "📦 Built TUI binaries:"
           ls -la bin/tui/ || echo "No TUI binaries built"
 
-      - name: Upload artifacts
+      - name: 📤 Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: binaries-${{ matrix.goos }}-${{ matrix.goarch }}
@@ -337,7 +337,7 @@ jobs:
           mkdir -p binary-test-results
 
           # Test unified binary
-          echo "Testing unified binary..."
+          echo "🔍 Testing unified binary..."
           for binary in bin/unified/*linux-amd64*; do
             if [ -f "$binary" ]; then
               echo "🔍 Testing unified: $binary..."
@@ -352,28 +352,28 @@ jobs:
               START_TIME=$(date +%s%N)
               
               # Test different modes with timing
-              echo "  Testing CLI mode (default):"
+              echo "  🎯 Testing CLI mode (default):"
               if timeout 10s $binary --help > /dev/null 2>&1; then
                 echo "    ✅ CLI mode works"
               else
                 echo "    ⚠️  CLI mode help failed or timed out"
               fi
               
-              echo "  Testing TUI mode:"
+              echo "  🖥️ Testing TUI mode:"
               if timeout 10s $binary tui --help > /dev/null 2>&1; then
                 echo "    ✅ TUI mode works"
               else
                 echo "    ⚠️  TUI mode help failed or timed out"
               fi
               
-              echo "  Testing server mode:"
+              echo "  🌐 Testing server mode:"
               if timeout 10s $binary serve --help > /dev/null 2>&1; then
                 echo "    ✅ Server mode works"
               else
                 echo "    ⚠️  Server mode help failed or timed out"
               fi
               
-              echo "  Testing version command:"
+              echo "  📝 Testing version command:"
               if timeout 5s $binary version > /dev/null 2>&1; then
                 echo "    ✅ Version command works"
               else
@@ -393,7 +393,7 @@ jobs:
           echo "🔍 Testing CLI binaries..."
           for binary in bin/cli/*linux-amd64*; do
             if [ -f "$binary" ]; then
-              echo "Testing CLI: $binary..."
+              echo "🔨 Testing CLI: $binary..."
               chmod +x "$binary"
               
               BINARY_SIZE=$(stat -f%z "$binary" 2>/dev/null || stat -c%s "$binary" 2>/dev/null || echo "0")
@@ -420,7 +420,7 @@ jobs:
           echo "🔍 Testing TUI binaries..."
           for binary in bin/tui/*linux-amd64*; do
             if [ -f "$binary" ]; then
-              echo "Testing TUI: $binary..."
+              echo "🖥️ Testing TUI: $binary..."
               chmod +x "$binary"
               
               BINARY_SIZE=$(stat -f%z "$binary" 2>/dev/null || stat -c%s "$binary" 2>/dev/null || echo "0")
@@ -470,22 +470,22 @@ jobs:
           retention-days: 7
 
   release:
-    name: Release
+    name: 🚀 Release
     runs-on: ubuntu-latest
     needs: [test, format, lint, security, build]
     if: startsWith(github.ref, 'refs/tags/v')
     steps:
-      - name: Checkout code
+      - name: 📥 Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Set up Go
+      - name: 🔧 Set up Go
         uses: actions/setup-go@v4
         with:
           go-version: ${{ env.GO_VERSION }}
 
-      - name: Cache Go modules
+      - name: 💾 Cache Go modules
         uses: actions/cache@v4
         with:
           path: |
@@ -503,25 +503,25 @@ jobs:
           pattern: binaries-*
           merge-multiple: true
 
-      - name: Prepare release assets
+      - name: 🎁 Prepare release assets
         run: |
           mkdir -p release/cli release/tui release/unified
 
           # Organize unified binaries (single all-in-one binary)
-          echo "Organizing unified binaries..."
+          echo "🎁 Organizing unified binaries..."
           find artifacts -path "*/bin/unified/*" -type f -exec cp {} release/unified/ \; || echo "No unified binaries found"
 
           # Organize CLI binaries
-          echo "Organizing CLI binaries..."
+          echo "🎁 Organizing CLI binaries..."
           find artifacts -path "*/bin/cli/*" -type f -exec cp {} release/cli/ \; || echo "No CLI binaries found"
 
           # Organize TUI binaries  
-          echo "Organizing TUI binaries..."
+          echo "🎁 Organizing TUI binaries..."
           find artifacts -path "*/bin/tui/*" -type f -exec cp {} release/tui/ \; || echo "No TUI binaries found"
 
           # Create unified binary archives (recommended download)
           if [ "$(ls -A release/unified 2>/dev/null)" ]; then
-            echo "Creating unified binary archives..."
+            echo "📦 Creating unified binary archives..."
             cd release
             zip -r go-toolbox-unified-${GITHUB_REF_NAME:-latest}.zip unified/
             tar -czf go-toolbox-unified-${GITHUB_REF_NAME:-latest}.tar.gz unified/
@@ -530,7 +530,7 @@ jobs:
 
           # Create archive packages for each type
           if [ "$(ls -A release/cli 2>/dev/null)" ]; then
-            echo "Creating CLI archive..."
+            echo "📦 Creating CLI archive..."
             cd release
             zip -r go-toolbox-cli-${GITHUB_REF_NAME:-latest}.zip cli/
             tar -czf go-toolbox-cli-${GITHUB_REF_NAME:-latest}.tar.gz cli/
@@ -538,7 +538,7 @@ jobs:
           fi
 
           if [ "$(ls -A release/tui 2>/dev/null)" ]; then
-            echo "Creating TUI archive..."
+            echo "📦 Creating TUI archive..."
             cd release
             zip -r go-toolbox-tui-${GITHUB_REF_NAME:-latest}.zip tui/
             tar -czf go-toolbox-tui-${GITHUB_REF_NAME:-latest}.tar.gz tui/
@@ -547,7 +547,7 @@ jobs:
 
           # Create combined archive (separate binaries)
           if [ "$(ls -A release/cli 2>/dev/null)" ] || [ "$(ls -A release/tui 2>/dev/null)" ]; then
-            echo "Creating combined separate binaries archive..."
+            echo "📦 Creating combined separate binaries archive..."
             cd release
             zip -r go-toolbox-separate-${GITHUB_REF_NAME:-latest}.zip cli/ tui/
             tar -czf go-toolbox-separate-${GITHUB_REF_NAME:-latest}.tar.gz cli/ tui/
@@ -556,7 +556,7 @@ jobs:
 
           # Create complete archive (unified + separate)
           if [ "$(ls -A release/unified 2>/dev/null)" ] && ([ "$(ls -A release/cli 2>/dev/null)" ] || [ "$(ls -A release/tui 2>/dev/null)" ]); then
-            echo "Creating complete archive (all binaries)..."
+            echo "📦 Creating complete archive (all binaries)..."
             cd release
             zip -r go-toolbox-complete-${GITHUB_REF_NAME:-latest}.zip unified/ cli/ tui/
             tar -czf go-toolbox-complete-${GITHUB_REF_NAME:-latest}.tar.gz unified/ cli/ tui/
@@ -564,29 +564,29 @@ jobs:
           fi
 
           # List what was created
-          echo "Release structure:"
+          echo "📦 Release structure:"
           ls -la release/
           if [ -d release/unified ]; then
-            echo "Unified binaries:"
+            echo "📦 Unified binaries:"
             ls -la release/unified/
           fi
           if [ -d release/cli ]; then
-            echo "CLI binaries:"
+            echo "📦 CLI binaries:"
             ls -la release/cli/
           fi
           if [ -d release/tui ]; then
-            echo "TUI binaries:"
+            echo "📦 TUI binaries:"
             ls -la release/tui/
           fi
 
-      - name: Generate changelog
+      - name: 📝 Generate changelog
         id: changelog
         run: |
           # Simple changelog generation
-          echo "Changes in this release:" > CHANGELOG.md
+          echo "📝 Changes in this release:" > CHANGELOG.md
           git log --pretty=format:"- %s" $(git describe --tags --abbrev=0 HEAD^)..HEAD >> CHANGELOG.md
 
-      - name: Check if release exists
+      - name: 🔍 Check if release exists
         id: release_exists
         run: |
           if gh release view ${{ github.ref_name }} > /dev/null 2>&1; then
@@ -597,20 +597,20 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload release assets to existing release
+      - name: 📤 Upload release assets to existing release
         if: steps.release_exists.outputs.exists == 'true'
         run: |
-          echo "Release already exists, uploading assets..."
+          echo "🔄 Release already exists, uploading assets..."
           for file in release/*; do
             if [ -f "$file" ]; then
-              echo "Uploading $file..."
+              echo "📤 Uploading $file..."
               gh release upload ${{ github.ref_name }} "$file" --clobber
             fi
           done
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Create new release
+      - name: 🎉 Create new release
         if: steps.release_exists.outputs.exists == 'false'
         uses: softprops/action-gh-release@v2.3.3
         env:

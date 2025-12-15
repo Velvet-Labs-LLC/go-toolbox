@@ -162,7 +162,7 @@ jobs:
           echo "  GOBIN: ${GOBIN}"
 
       - name: 💾 Cache Go modules and build cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         id: go-cache
         with:
           path: |
@@ -414,7 +414,7 @@ jobs:
           echo "  GOBIN: ${GOBIN}"
 
       - name: Cache Go modules
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/go/pkg/mod-embedded-${{ matrix.goos }}-${{ matrix.goarch }}-${{ github.run_id }}-${{ github.run_attempt }}
